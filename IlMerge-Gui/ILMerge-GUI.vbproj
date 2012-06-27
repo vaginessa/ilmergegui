@@ -13,16 +13,13 @@
     <MyType>WindowsForms</MyType>
     <OptionStrict>On</OptionStrict>
     <ApplicationIcon>Icon.ico</ApplicationIcon>
-    <SccProjectName>
-    </SccProjectName>
-    <SccLocalPath>
-    </SccLocalPath>
-    <SccAuxPath>
-    </SccAuxPath>
-    <SccProvider>
-    </SccProvider>
+    <SccProjectName>Plastic SCM</SccProjectName>
+    <SccLocalPath>Plastic SCM</SccLocalPath>
+    <SccAuxPath>Plastic SCM</SccAuxPath>
+    <SccProvider>Plastic SCM Source Control Service:{774e58ba-f1b9-40a7-b676-834fa2c220fe}</SccProvider>
     <SignAssembly>true</SignAssembly>
-    <AssemblyOriginatorKeyFile>Devv.Utilities.snk</AssemblyOriginatorKeyFile>
+    <AssemblyOriginatorKeyFile>
+    </AssemblyOriginatorKeyFile>
     <FileUpgradeFlags>
     </FileUpgradeFlags>
     <OldToolsVersion>3.5</OldToolsVersion>
@@ -73,6 +70,9 @@
     <DefineConstants>_MyType="WindowsForms"</DefineConstants>
     <CodeAnalysisRuleSet>BasicCorrectnessRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationManifest>My Project\app.manifest</ApplicationManifest>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="ILMerge, Version=2.10.219.0, Culture=neutral, PublicKeyToken=736440c9b414ea16, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -84,6 +84,7 @@
     <Reference Include="System.Windows.Forms" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ApplicationEvents.vb" />
     <Compile Include="MainForm.Designer.vb">
       <DependentUpon>MainForm.vb</DependentUpon>
     </Compile>
@@ -127,9 +128,6 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Devv.Utilities.snk" />
-  </ItemGroup>
-  <ItemGroup>
     <Content Include="Icon.ico" />
     <None Include="App.config" />
     <None Include="Images\IconLoading.gif" />
@@ -137,6 +135,7 @@
     <None Include="Images\IconV.png" />
     <None Include="Images\IconAdd.png" />
     <None Include="Images\Donate.gif" />
+    <None Include="My Project\app.manifest" />
     <None Include="My Project\Settings.settings">
       <CustomToolNamespace>My</CustomToolNamespace>
       <Generator>SettingsSingleFileGenerator</Generator>
@@ -146,16 +145,6 @@
       <Generator>MyApplicationCodeGenerator</Generator>
       <LastGenOutput>Application.Designer.vb</LastGenOutput>
     </Content>
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\Core\Erroo\Devv.Core.Erroo.vbproj">
-      <Project>{FBD369B5-AEC1-4C25-A0BB-940639E5A25C}</Project>
-      <Name>Devv.Core.Erroo</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\Core\Utils\Devv.Core.Utils.vbproj">
-      <Project>{84731D70-CD9F-4087-9CE3-DB806842A07D}</Project>
-      <Name>Devv.Core.Utils</Name>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
