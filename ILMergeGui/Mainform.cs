@@ -746,10 +746,19 @@ namespace ILMergeGui
 
             //0=Dll
             //1=Exe
-            //2=ILMerge.Kind.SameAsPrimaryAssembly
-            //3=WinExe
+            //2=WinExe
+            //3=ILMerge.Kind.SameAsPrimaryAssembly
 
-            Console.WriteLine("ILMerge.{0}={1}", "TargetKind", DynaInvoke.SetProperty<Int32>(iLMergePath, ilMerge, "TargetKind", 2));
+            //public enum Kind
+            //{
+            //    Dll,                  //0
+            //    Exe,                  //1
+            //    WinExe,               //2
+            //    SameAsPrimaryAssembly //3
+            //}
+
+            //fix for issue: 8737
+            Console.WriteLine("ILMerge.{0}={1}", "TargetKind", DynaInvoke.SetProperty<Int32>(iLMergePath, ilMerge, "TargetKind", 3));
             Console.WriteLine("ILMerge.{0}={1}", "OutputFile", DynaInvoke.SetProperty<String>(iLMergePath, ilMerge, "OutputFile", TxtOutputAssembly.Text));
 
             Console.WriteLine("ILMerge.{0}(", "SetInputAssemblies");
