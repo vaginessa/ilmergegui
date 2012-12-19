@@ -52,6 +52,8 @@
             this.ListAssembly = new System.Windows.Forms.ListView();
             this.columnHeader1 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.columnHeader2 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.ChkInternalize = new System.Windows.Forms.CheckBox();
+            this.ChkMergeXml = new System.Windows.Forms.CheckBox();
             this.WorkerILMerge = new System.ComponentModel.BackgroundWorker();
             this.openFile1 = new System.Windows.Forms.OpenFileDialog();
             this.LblPrimaryAssembly = new System.Windows.Forms.Label();
@@ -92,6 +94,7 @@
             this.label1 = new System.Windows.Forms.Label();
             this.openFileDialog1 = new System.Windows.Forms.OpenFileDialog();
             this.saveFileDialog1 = new System.Windows.Forms.SaveFileDialog();
+            this.label2 = new System.Windows.Forms.Label();
             this.BoxOutput.SuspendLayout();
             this.BoxOptions.SuspendLayout();
             this.menuStrip1.SuspendLayout();
@@ -129,7 +132,7 @@
             this.ChkSignKeyFile.Size = new System.Drawing.Size(105, 17);
             this.ChkSignKeyFile.TabIndex = 5;
             this.ChkSignKeyFile.Text = "Sign with key file";
-            this.ToolTips.SetToolTip(this.ChkSignKeyFile, "Sign the output assembly with a key file");
+            this.ToolTips.SetToolTip(this.ChkSignKeyFile, "Sign the output assembly with a key file.");
             this.ChkSignKeyFile.UseVisualStyleBackColor = true;
             this.ChkSignKeyFile.CheckedChanged += new System.EventHandler(this.ChkSignKeyFile_CheckedChanged);
             // 
@@ -146,7 +149,7 @@
             this.btnAddFile.TabIndex = 33;
             this.btnAddFile.Text = "Add assemblies";
             this.btnAddFile.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
-            this.ToolTips.SetToolTip(this.btnAddFile, "Click to select and add assemblies to the list");
+            this.ToolTips.SetToolTip(this.btnAddFile, "Click to select and add assemblies to the list.");
             this.btnAddFile.UseVisualStyleBackColor = true;
             this.btnAddFile.Click += new System.EventHandler(this.btnAddFile_Click);
             // 
@@ -158,7 +161,7 @@
             this.ChkGenerateLog.Size = new System.Drawing.Size(103, 17);
             this.ChkGenerateLog.TabIndex = 13;
             this.ChkGenerateLog.Text = "Generate log file";
-            this.ToolTips.SetToolTip(this.ChkGenerateLog, "Write results to a log file");
+            this.ToolTips.SetToolTip(this.ChkGenerateLog, "Write results to a log file.");
             this.ChkGenerateLog.UseVisualStyleBackColor = true;
             this.ChkGenerateLog.CheckedChanged += new System.EventHandler(this.ChkGenerateLog_CheckedChanged);
             // 
@@ -171,7 +174,7 @@
             this.ChkDelayedSign.Size = new System.Drawing.Size(87, 17);
             this.ChkDelayedSign.TabIndex = 7;
             this.ChkDelayedSign.Text = "Delayed sign";
-            this.ToolTips.SetToolTip(this.ChkDelayedSign, "Use delayed sign");
+            this.ToolTips.SetToolTip(this.ChkDelayedSign, "Use delayed sign.");
             this.ChkDelayedSign.UseVisualStyleBackColor = true;
             // 
             // btnLogFile
@@ -197,7 +200,7 @@
             this.ChkUnionDuplicates.Size = new System.Drawing.Size(105, 17);
             this.ChkUnionDuplicates.TabIndex = 3;
             this.ChkUnionDuplicates.Text = "Union duplicates";
-            this.ToolTips.SetToolTip(this.ChkUnionDuplicates, "Union duplicate classes and references");
+            this.ToolTips.SetToolTip(this.ChkUnionDuplicates, "Union duplicate classes and references.");
             this.ChkUnionDuplicates.UseVisualStyleBackColor = true;
             // 
             // TxtLogFile
@@ -212,7 +215,7 @@
             this.TxtLogFile.Name = "TxtLogFile";
             this.TxtLogFile.Size = new System.Drawing.Size(517, 20);
             this.TxtLogFile.TabIndex = 15;
-            this.ToolTips.SetToolTip(this.TxtLogFile, "Path to the log file");
+            this.ToolTips.SetToolTip(this.TxtLogFile, "Path to the log file.");
             // 
             // btnKeyFile
             // 
@@ -239,7 +242,7 @@
             this.ChkCopyAttributes.Size = new System.Drawing.Size(96, 17);
             this.ChkCopyAttributes.TabIndex = 1;
             this.ChkCopyAttributes.Text = "Copy attributes";
-            this.ToolTips.SetToolTip(this.ChkCopyAttributes, "Copy assembly attributes");
+            this.ToolTips.SetToolTip(this.ChkCopyAttributes, "Copy assembly attributes.");
             this.ChkCopyAttributes.UseVisualStyleBackColor = true;
             // 
             // TxtKeyFile
@@ -267,7 +270,7 @@
             this.TxtOutputAssembly.Name = "TxtOutputAssembly";
             this.TxtOutputAssembly.Size = new System.Drawing.Size(517, 20);
             this.TxtOutputAssembly.TabIndex = 2;
-            this.ToolTips.SetToolTip(this.TxtOutputAssembly, "Path to the output generated assembly");
+            this.ToolTips.SetToolTip(this.TxtOutputAssembly, "Path to the output generated assembly.");
             // 
             // btnOutputPath
             // 
@@ -297,7 +300,7 @@
             this.btnMerge.TabIndex = 10;
             this.btnMerge.Text = "Merge!";
             this.btnMerge.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
-            this.ToolTips.SetToolTip(this.btnMerge, "Click to start merging");
+            this.ToolTips.SetToolTip(this.btnMerge, "Click to start merging.");
             this.btnMerge.UseVisualStyleBackColor = true;
             this.btnMerge.Click += new System.EventHandler(this.btnMerge_Click);
             // 
@@ -312,7 +315,8 @@
             this.CboDebug.Name = "CboDebug";
             this.CboDebug.Size = new System.Drawing.Size(64, 21);
             this.CboDebug.TabIndex = 6;
-            this.ToolTips.SetToolTip(this.CboDebug, "Set the debug parameter");
+            this.ToolTips.SetToolTip(this.CboDebug, "Set the debug parameter.");
+            this.CboDebug.SelectedIndexChanged += new System.EventHandler(this.CboDebug_SelectedIndexChanged);
             // 
             // CboTargetFramework
             // 
@@ -329,7 +333,7 @@
             this.CboTargetFramework.Name = "CboTargetFramework";
             this.CboTargetFramework.Size = new System.Drawing.Size(227, 21);
             this.CboTargetFramework.TabIndex = 8;
-            this.ToolTips.SetToolTip(this.CboTargetFramework, "Set the target framework");
+            this.ToolTips.SetToolTip(this.CboTargetFramework, "Set the target framework.");
             // 
             // ListAssembly
             // 
@@ -350,7 +354,7 @@
             this.ListAssembly.Name = "ListAssembly";
             this.ListAssembly.Size = new System.Drawing.Size(554, 180);
             this.ListAssembly.TabIndex = 34;
-            this.ToolTips.SetToolTip(this.ListAssembly, "Assemblies to be merged");
+            this.ToolTips.SetToolTip(this.ListAssembly, "Assemblies to be merged.");
             this.ListAssembly.UseCompatibleStateImageBehavior = false;
             this.ListAssembly.View = System.Windows.Forms.View.Details;
             this.ListAssembly.ItemCheck += new System.Windows.Forms.ItemCheckEventHandler(this.ListAssembly_ItemCheck);
@@ -362,6 +366,28 @@
             // columnHeader1
             // 
             this.columnHeader1.Text = "Assembly";
+            // 
+            // ChkInternalize
+            // 
+            this.ChkInternalize.AutoSize = true;
+            this.ChkInternalize.Location = new System.Drawing.Point(253, 21);
+            this.ChkInternalize.Name = "ChkInternalize";
+            this.ChkInternalize.Size = new System.Drawing.Size(74, 17);
+            this.ChkInternalize.TabIndex = 18;
+            this.ChkInternalize.Text = "Internalize";
+            this.ToolTips.SetToolTip(this.ChkInternalize, "Change all public identifiers into internal ones.");
+            this.ChkInternalize.UseVisualStyleBackColor = true;
+            // 
+            // ChkMergeXml
+            // 
+            this.ChkMergeXml.AutoSize = true;
+            this.ChkMergeXml.Location = new System.Drawing.Point(253, 49);
+            this.ChkMergeXml.Name = "ChkMergeXml";
+            this.ChkMergeXml.Size = new System.Drawing.Size(147, 17);
+            this.ChkMergeXml.TabIndex = 19;
+            this.ChkMergeXml.Text = "Merge xml documentation";
+            this.ToolTips.SetToolTip(this.ChkMergeXml, "Merge xml documentation into a single file.");
+            this.ChkMergeXml.UseVisualStyleBackColor = true;
             // 
             // WorkerILMerge
             // 
@@ -444,6 +470,8 @@
             // 
             this.BoxOptions.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.BoxOptions.Controls.Add(this.ChkMergeXml);
+            this.BoxOptions.Controls.Add(this.ChkInternalize);
             this.BoxOptions.Controls.Add(this.ChkSignKeyFile);
             this.BoxOptions.Controls.Add(this.ChkGenerateLog);
             this.BoxOptions.Controls.Add(this.ChkDelayedSign);
@@ -682,11 +710,22 @@
             this.saveFileDialog1.Filter = "IlMerge Project|*.ilproj|All Files|*.*";
             this.saveFileDialog1.Title = "Save as IlMergeGui Project";
             // 
+            // label2
+            // 
+            this.label2.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.label2.AutoSize = true;
+            this.label2.Location = new System.Drawing.Point(9, 553);
+            this.label2.Name = "label2";
+            this.label2.Size = new System.Drawing.Size(35, 13);
+            this.label2.TabIndex = 41;
+            this.label2.Text = "label2";
+            // 
             // Mainform
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(584, 575);
+            this.Controls.Add(this.label2);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.LinkILMerge);
@@ -777,6 +816,9 @@
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.OpenFileDialog openFileDialog1;
         private System.Windows.Forms.SaveFileDialog saveFileDialog1;
+        internal System.Windows.Forms.CheckBox ChkInternalize;
+        internal System.Windows.Forms.CheckBox ChkMergeXml;
+        private System.Windows.Forms.Label label2;
 
     }
 }

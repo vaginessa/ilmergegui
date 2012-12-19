@@ -704,6 +704,10 @@ namespace ILMergeGui
             Console.WriteLine("ILMerge.{0}={1}", "CopyAttributes", DynaInvoke.SetProperty<Boolean>(iLMergePath, ilMerge, "CopyAttributes", ChkCopyAttributes.Checked));
             Console.WriteLine("ILMerge.{0}={1}", "UnionMerge", DynaInvoke.SetProperty<Boolean>(iLMergePath, ilMerge, "UnionMerge", ChkUnionDuplicates.Checked));
 
+            Console.WriteLine("ILMerge.{0}={1}", "Internalize", DynaInvoke.SetProperty<Boolean>(iLMergePath, ilMerge, "Internalize", ChkInternalize.Checked));
+
+            Console.WriteLine("ILMerge.{0}={1}", "XmlDocumentation", DynaInvoke.SetProperty<Boolean>(iLMergePath, ilMerge, "XmlDocumentation", ChkMergeXml.Checked));
+
             if (ChkSignKeyFile.Checked)
             {
                 Console.WriteLine("ILMerge.{0}={1}", "KeyFile", DynaInvoke.SetProperty<String>(iLMergePath, ilMerge, "KeyFile", TxtKeyFile.Text));
@@ -1012,6 +1016,8 @@ namespace ILMergeGui
             {
                 label1.Text = String.Format("IlMerge: {0}", "not found.");
             }
+
+            label2.Text = String.Format("IlMergeGui: v{0}", Assembly.GetExecutingAssembly().GetName().Version);
 
             RestoreDefaults();
 
@@ -1593,6 +1599,11 @@ namespace ILMergeGui
 
                 ListAssembly.EndUpdate();
             }
+        }
+
+        private void CboDebug_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            //
         }
     }
 }
