@@ -630,7 +630,8 @@ namespace ILMergeGui
 
             PreMerge();
 
-            if (!Directory.Exists(Path.GetDirectoryName(TxtOutputAssembly.Text)))
+            //! [workitem:8741]
+            if (String.IsNullOrWhiteSpace(TxtOutputAssembly.Text) || !Directory.Exists(Path.GetDirectoryName(TxtOutputAssembly.Text)))
             {
                 MessageBox.Show(Resources.Error_NoOutputPath, Resources.Error_Term, MessageBoxButtons.OK, MessageBoxIcon.Error);
                 TxtOutputAssembly.Focus();
