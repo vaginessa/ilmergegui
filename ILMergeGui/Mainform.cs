@@ -31,20 +31,37 @@
  *                  - Changed linklabels
  *                  - Removed donate.
  *                  - Debugged MakeRelativePath (same paths returned empty string).
- * 05-05-2012 - veg - Added menubar
+ * ----------   ---   -------------------------------------------------------------------------------
+ * 05-05-2012 - veg - Added menubar.
  *                  - Added saving and restoring of settings in xml format.
+ * ----------   ---   -------------------------------------------------------------------------------
  * 21-06-2012 - veg - Improved ILMerge.exe searching (added path and assembly registry).
  *                  - Swapped ListBox for ListView.
  *                  - Added transparent background watermark image.
  *                  - Changed logic around formatting the display values.
  *                    Reformat them all using the ListViewItem Tag property as storage for original filenames.
  *                  - Change code to use Tag property for filename (TEST!).
+ * ----------   ---   ------------------------------------------------------------------------------- 
  * 22-06-2012 - veg - Added support for dropping (sub) directories.
  *                  - Added checkboxes for primary assembly instead of selected item.
  *                  - Refactored code a bit.
  *                  - Added version column.
  *                  - Enabled AutoVersionIncrement on Rebuild.
- * ----------   ---   ------------------------------------------------------------------------------- */
+ * ----------   ---   -------------------------------------------------------------------------------
+ * 19-12-2012 - veg - Added Internalize support.
+ *                  - Added support for merging XmlDocumentation.
+ *                  - Added version number to main form (should be 2.0.4 for this release).
+ *                  - Updated click-once installer.
+ *                  - Fixed merging assemblies into a dll.
+ *                  - Released as v2.0.4
+ * ----------   ---   -------------------------------------------------------------------------------
+ * 19-12-2012 - veg - Fixed workitem 8741.
+ * ----------   ---   ------------------------------------------------------------------------------- 
+ * 27-12-2012 - veg - Added new switched (internalize and mergexml) to ilproj settings.
+ *                  - Added registration project file type (once, if running elevated).
+ *                  - Added indication that project file type is registred or not.
+ * ----------   ---   ------------------------------------------------------------------------------- 
+ */
 
 #endregion Header
 
@@ -991,9 +1008,19 @@ namespace ILMergeGui
 
         private void Mainform_Load(object sender, EventArgs e)
         {
+            Boolean registered = RegisterIlProj();
+
             Extensions = new Dictionary<String, String>();
             Extensions.Add("exe", "Executable(s)");
             Extensions.Add("dll", "Assemblies or dll(s)");
+
+            openFileDialog1.DefaultExt = MyWildcard;
+            openFileDialog1.FileName = MyWildcard;
+            openFileDialog1.Filter = String.Format("IlMerge Project|{0}|All Files|*.*", MyWildcard);
+
+            saveFileDialog1.DefaultExt = MyWildcard;
+            saveFileDialog1.FileName = MyWildcard;
+            saveFileDialog1.Filter = String.Format("IlMerge Project|{0}|All Files|*.*", MyWildcard);
 
             ListAssembly.Columns[0].AutoResize(ColumnHeaderAutoResizeStyle.ColumnContent);
 
@@ -1018,7 +1045,8 @@ namespace ILMergeGui
                 label1.Text = String.Format("IlMerge: {0}", "not found.");
             }
 
-            label2.Text = String.Format("IlMergeGui: v{0}", Assembly.GetExecutingAssembly().GetName().Version);
+            label2.Text = String.Format("IlMergeGui: v{0} {1}", Assembly.GetExecutingAssembly().GetName().Version,
+                String.Format((registered ? "({0} extension registered)" : "({0} extension not registered, run elevated once)"), MyExtension));
 
             RestoreDefaults();
 
@@ -1026,18 +1054,30 @@ namespace ILMergeGui
             {
                 if (!arg.StartsWith("/") &&
                     File.Exists(arg) &&
-                    Path.GetExtension(arg).Equals(".xml", StringComparison.OrdinalIgnoreCase))
+                    Path.GetExtension(arg).Equals(MyExtension, StringComparison.OrdinalIgnoreCase))
                 {
                     RestoreSettings(arg);
+
+                    foreach (String arg1 in Environment.GetCommandLineArgs())
+                    {
+                        if (arg1.Equals("/Merge", StringComparison.OrdinalIgnoreCase))
+                        {
+                            btnMerge.PerformClick();
+                        }
+                    }
+
                     break;
                 }
             }
 
             foreach (String arg in Environment.GetCommandLineArgs())
             {
-                if (arg.Equals("/Merge", StringComparison.OrdinalIgnoreCase))
+                if (arg.Equals("/?", StringComparison.OrdinalIgnoreCase) ||
+                    arg.Equals("/h?", StringComparison.OrdinalIgnoreCase) ||
+                    arg.Equals("/help", StringComparison.OrdinalIgnoreCase))
                 {
-                    btnMerge.PerformClick();
+                    MessageBox.Show("Commandline syntax is:\r\n\r\n" +
+                      String.Format("ILMergeGui <{0}> [/Merge] [/?]\r\n", MyWildcard), Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
                 }
             }
         }
@@ -1214,6 +1254,14 @@ namespace ILMergeGui
             ChkCopyAttributes.Checked = Boolean.Parse(doc.Root.Element("CopyAttributes").Attribute("Enabled").Value);
             ChkUnionDuplicates.Checked = Boolean.Parse(doc.Root.Element("UnionDuplicates").Attribute("Enabled").Value);
             CboDebug.SelectedIndex = Int32.Parse(doc.Root.Element("Debug").Attribute("Enabled").Value);
+            if (doc.Root.Element("Internalize") != null)
+            {
+                ChkInternalize.Checked = Boolean.Parse(doc.Root.Element("Internalize").Attribute("Enabled").Value);
+            }
+            if (doc.Root.Element("MergeXml") != null)
+            {
+                ChkMergeXml.Checked = Boolean.Parse(doc.Root.Element("MergeXml").Attribute("Enabled").Value);
+            }
 
             //2) Restore Signing.
             ChkSignKeyFile.Checked = Boolean.Parse(doc.Root.Element("Sign").Attribute("Enabled").Value);
@@ -1261,7 +1309,9 @@ namespace ILMergeGui
                 new XComment("Switches"),
                 new XElement("CopyAttributes", new XAttribute("Enabled", ChkCopyAttributes.Checked)),
                 new XElement("UnionDuplicates", new XAttribute("Enabled", ChkUnionDuplicates.Checked)),
-                new XElement("Debug", new XAttribute("Enabled", CboDebug.SelectedIndex)));
+                new XElement("Debug", new XAttribute("Enabled", CboDebug.SelectedIndex)),
+                new XElement("Internalize", new XAttribute("Enabled", ChkInternalize.Checked)),
+                new XElement("MergeXml", new XAttribute("Enabled", ChkMergeXml.Checked)));
 
             //2) Save Signing.
             doc.Root.Add(
@@ -1406,6 +1456,240 @@ namespace ILMergeGui
             openFile1.FileName = filter.Substring(filter.IndexOf('|') + 1);
         }
 
+        const String MyAppName = "ILMergeGui";
+        const String MyExtension = ".ilproj";
+        const String MyWildcard = "*" + MyExtension;
+
+        /// <summary>
+        /// Registers ILMerge File Type.
+        /// </summary>
+        /// <returns>true if successfull</returns>
+        static public Boolean DetectIlProj()
+        {
+            //TODO Should this be HKEY_CURRENT_USER\Software\Classes or HKEY_LOCAL_MACHINE\Software\Classes?
+            //     See http://social.msdn.microsoft.com/Forums/en/netfxbcl/thread/630ed1d9-73f1-4cc0-bc84-04f29cffc13b
+
+            using (RegistryKey rk = Registry.ClassesRoot.OpenSubKey(MyExtension, false))
+            {
+                if (rk == null)
+                {
+                    return false;
+                }
+
+                // Check Our own filetype
+                if (rk.GetValue(null) == null || !rk.GetValue(null).Equals(MyAppName + "_file"))
+                {
+                    return false;
+                }
+
+                // Check Mime type...
+                if (rk.GetValue("Content Type") == null || !rk.GetValue("Content Type").Equals(String.Format("application/{0}", MyAppName.ToLower())))
+                {
+                    return false;
+                }
+
+                using (RegistryKey rk2 = Registry.ClassesRoot.OpenSubKey(@"\" + MyAppName + "_file", false))
+                {
+                    if (rk2 == null)
+                    {
+                        return false;
+                    }
+
+                    // Check Assignment of hottack.net to *.hot files
+                    if (rk2.GetValue(null) == null || !rk2.GetValue(null).Equals(MyAppName + " File"))
+                    {
+                        return false;
+                    }
+
+                    // Check editflags
+                    if (rk2.GetValue("EditFlags") == null)
+                    {
+                        return false;
+                    }
+
+                    // Check Show extension
+                    if (rk2.GetValue("AlwaysShowExt") == null)
+                    {
+                        return true;
+                    }
+
+                    // Check the icon to a large application one
+                    using (RegistryKey rk3 = rk2.OpenSubKey("DefaultIcon", false))
+                    {
+                        if (rk3 == null || rk3.GetValue(null) == null || !rk3.GetValue(null).ToString().Equals(Application.ExecutablePath + ",0", StringComparison.OrdinalIgnoreCase))
+                        {
+                            return false;
+                        }
+                    }
+
+                    // Check the open verb
+                    using (RegistryKey rk4 = rk2.OpenSubKey(@"shell\open\command", false))
+                    {
+                        if (rk4 == null || rk4.GetValue(null) == null || !rk4.GetValue(null).ToString().Equals("\"" + Application.ExecutablePath + "\"" + " \"%1\"", StringComparison.OrdinalIgnoreCase))
+                        {
+                            return false;
+                        }
+                    }
+
+                    // Check the merge verb
+                    using (RegistryKey rk5 = rk2.OpenSubKey(@"shell\merge\command", false))
+                    {
+                        if (rk5 == null || rk5.GetValue(null) == null || !rk5.GetValue(null).ToString().Equals("\"" + Application.ExecutablePath + "\"" + " \"%1\" /Merge", StringComparison.OrdinalIgnoreCase))
+                        {
+                            return false;
+                        }
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Register File Type and Application.
+        /// </summary>
+        /// <returns>True if successfull</returns>
+        public static Boolean RegisterIlProj()
+        {
+            if (DetectIlProj())
+            {
+                return true;
+            }
+
+            try
+            {
+                using (RegistryKey rk1 = Registry.ClassesRoot.CreateSubKey(MyExtension))
+                {
+
+                    // Register our own filetype
+                    if (rk1 != null)
+                    {
+                        // Assign hottack.net to *.hot files
+                        if (rk1.GetValue(null) == null ||
+                            !rk1.GetValue(null).Equals(MyAppName + "_file"))
+                        {
+                            //(Default) value.
+                            rk1.SetValue(null, MyAppName + "_file");
+                        }
+
+                        // Propose a new mime type...
+                        if (rk1.GetValue("Content Type") == null ||
+                            !rk1.GetValue("Content Type").Equals(String.Format("application/{0}", MyAppName.ToLower())))
+                        {
+                            rk1.SetValue("Content Type", String.Format("application/{0}", MyAppName.ToLower()));
+                        }
+                    }
+                    else
+                    {
+                        return false;
+                    }
+
+                    using (RegistryKey rk2 = Registry.ClassesRoot.CreateSubKey(MyAppName + "_file"))
+                    {
+                        // Register our own filetype
+                        if (rk2 != null)
+                        {
+                            // Assign hottack.net to *.hot files
+                            if (rk2.GetValue(null) == null ||
+                                !rk2.GetValue(null).Equals(MyAppName + " File"))
+                            {
+                                rk2.SetValue(null, MyAppName + " File");
+                            }
+
+                            // Purpose of editflags unknown
+                            if (rk2.GetValue("EditFlags") == null)
+                            {
+                                rk2.SetValue("EditFlags", new Byte[4] { 0, 0, 0, 0 }, RegistryValueKind.Binary);
+                            }
+
+                            // Always show extension
+                            if (rk2.GetValue("AlwaysShowExt") == null)
+                            {
+                                rk2.SetValue("AlwaysShowExt", String.Empty);
+                            }
+
+                            // Change the icon to a large application one
+                            using (RegistryKey rk3 = rk2.CreateSubKey("DefaultIcon"))
+                            {
+                                if (rk3 != null)
+                                {
+                                    if (rk3.GetValue(null) == null ||
+                                        !rk3.GetValue(null).Equals(Application.ExecutablePath + ",0"))
+                                    {
+                                        rk3.SetValue(null, Application.ExecutablePath + ",0");
+                                    }
+                                }
+                                else
+                                {
+                                    return false;
+                                }
+
+                            }
+
+                            // Add the open verb
+                            using (RegistryKey rk4 = rk2.CreateSubKey(@"shell\open\command"))
+                            {
+                                if (rk4 != null)
+                                {
+                                    if (rk4.GetValue(null) == null ||
+                                        !rk4.GetValue(null).Equals("\"" + Application.ExecutablePath + "\"" + " \"%1\""))
+                                    {
+                                        rk4.SetValue(null, "\"" + Application.ExecutablePath + "\"" + " \"%1\"");
+                                    }
+                                }
+                                else
+                                {
+                                    return false;
+                                }
+                            }
+
+                            // Add the merge verb
+                            using (RegistryKey rk4 = rk2.CreateSubKey(@"shell\merge\command"))
+                            {
+                                if (rk4 != null)
+                                {
+                                    if (rk4.GetValue(null) == null ||
+                                        !rk4.GetValue(null).Equals("\"" + Application.ExecutablePath + "\"" + " \"%1\" /Merge"))
+                                    {
+                                        rk4.SetValue(null, "\"" + Application.ExecutablePath + "\"" + " \"%1\" /Merge");
+                                    }
+                                }
+                                else
+                                {
+                                    return false;
+                                }
+                            }
+
+                            //TODO ilproj_auto_file|shell|open|command|(Default)=Executable?
+                            //     Not clear what creates this key. Created by Explorer's Open Width Context MenuItem?
+
+                            //TODO HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\.ilproj
+                            //     If old code does not work, above key is probably present (controlled by Explorer's Open Width Context MenuItem).
+
+                            //TODO HKEY_CLASSES_ROOT\Applications\ILMergeGui.exe
+                            //     Created by Explorer's Open Width Context MenuItem. 
+
+                            //{$IFDEF SHLWAPI}
+                            //            //Let Windows Udate Explorer
+                            //            SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, nil, nil);
+                            //{$ENDIF SHLWAPI}
+                        }
+                        else
+                        {
+                            return false;
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+
         private void SetWaterMark(Boolean show)
         {
             LVBKIMAGE backImage = new LVBKIMAGE();
@@ -1496,6 +1780,39 @@ namespace ILMergeGui
             }
         }
 
+        private void mnuFileExit_Click(object sender, EventArgs e)
+        {
+            Application.Exit();
+        }
+
+        private void ListAssembly_ItemChecked(object sender, ItemCheckedEventArgs e)
+        {
+            UpdatePrimary();
+        }
+
+        private void ListAssembly_ItemCheck(object sender, ItemCheckEventArgs e)
+        {
+            if (e.NewValue == CheckState.Checked)
+            {
+                ListAssembly.BeginUpdate();
+                foreach (ListViewItem lvi in ListAssembly.CheckedItems)
+                {
+                    if (lvi.Index != e.Index)
+                    {
+                        lvi.Checked = false;
+                        lvi.Selected = false;
+                    }
+                }
+
+                foreach (ListViewItem lvi in ListAssembly.Items)
+                {
+                    lvi.Selected = lvi.Index == e.Index;
+                }
+
+                ListAssembly.EndUpdate();
+            }
+        }
+
         #endregion Methods
 
         #region Nested Types
@@ -1568,43 +1885,5 @@ namespace ILMergeGui
         }
 
         #endregion Nested Types
-
-        private void mnuFileExit_Click(object sender, EventArgs e)
-        {
-            Application.Exit();
-        }
-
-        private void ListAssembly_ItemChecked(object sender, ItemCheckedEventArgs e)
-        {
-            UpdatePrimary();
-        }
-
-        private void ListAssembly_ItemCheck(object sender, ItemCheckEventArgs e)
-        {
-            if (e.NewValue == CheckState.Checked)
-            {
-                ListAssembly.BeginUpdate();
-                foreach (ListViewItem lvi in ListAssembly.CheckedItems)
-                {
-                    if (lvi.Index != e.Index)
-                    {
-                        lvi.Checked = false;
-                        lvi.Selected = false;
-                    }
-                }
-
-                foreach (ListViewItem lvi in ListAssembly.Items)
-                {
-                    lvi.Selected = lvi.Index == e.Index;
-                }
-
-                ListAssembly.EndUpdate();
-            }
-        }
-
-        private void CboDebug_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            //
-        }
     }
 }

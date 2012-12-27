@@ -114,7 +114,7 @@
             this.LinkILMerge.ImeMode = System.Windows.Forms.ImeMode.NoControl;
             this.LinkILMerge.LinkBehavior = System.Windows.Forms.LinkBehavior.HoverUnderline;
             this.LinkILMerge.LinkColor = System.Drawing.SystemColors.HotTrack;
-            this.LinkILMerge.Location = new System.Drawing.Point(309, 535);
+            this.LinkILMerge.Location = new System.Drawing.Point(370, 535);
             this.LinkILMerge.Name = "LinkILMerge";
             this.LinkILMerge.Size = new System.Drawing.Size(263, 13);
             this.LinkILMerge.TabIndex = 37;
@@ -143,7 +143,7 @@
             this.btnAddFile.Image = global::ILMergeGui.Properties.Resources.IconAdd;
             this.btnAddFile.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.btnAddFile.ImeMode = System.Windows.Forms.ImeMode.NoControl;
-            this.btnAddFile.Location = new System.Drawing.Point(442, 202);
+            this.btnAddFile.Location = new System.Drawing.Point(503, 202);
             this.btnAddFile.Name = "btnAddFile";
             this.btnAddFile.Size = new System.Drawing.Size(112, 23);
             this.btnAddFile.TabIndex = 33;
@@ -184,7 +184,7 @@
             this.btnLogFile.Enabled = false;
             this.btnLogFile.Image = global::ILMergeGui.Properties.Resources.IconFolder;
             this.btnLogFile.ImeMode = System.Windows.Forms.ImeMode.NoControl;
-            this.btnLogFile.Location = new System.Drawing.Point(529, 116);
+            this.btnLogFile.Location = new System.Drawing.Point(590, 116);
             this.btnLogFile.Name = "btnLogFile";
             this.btnLogFile.Size = new System.Drawing.Size(25, 23);
             this.btnLogFile.TabIndex = 17;
@@ -213,7 +213,7 @@
             this.TxtLogFile.Location = new System.Drawing.Point(6, 118);
             this.TxtLogFile.MaxLength = 255;
             this.TxtLogFile.Name = "TxtLogFile";
-            this.TxtLogFile.Size = new System.Drawing.Size(517, 20);
+            this.TxtLogFile.Size = new System.Drawing.Size(578, 20);
             this.TxtLogFile.TabIndex = 15;
             this.ToolTips.SetToolTip(this.TxtLogFile, "Path to the log file.");
             // 
@@ -224,7 +224,7 @@
             this.btnKeyFile.Enabled = false;
             this.btnKeyFile.Image = global::ILMergeGui.Properties.Resources.IconFolder;
             this.btnKeyFile.ImeMode = System.Windows.Forms.ImeMode.NoControl;
-            this.btnKeyFile.Location = new System.Drawing.Point(529, 66);
+            this.btnKeyFile.Location = new System.Drawing.Point(590, 66);
             this.btnKeyFile.Name = "btnKeyFile";
             this.btnKeyFile.Size = new System.Drawing.Size(25, 23);
             this.btnKeyFile.TabIndex = 11;
@@ -255,7 +255,7 @@
             this.TxtKeyFile.Location = new System.Drawing.Point(6, 68);
             this.TxtKeyFile.MaxLength = 255;
             this.TxtKeyFile.Name = "TxtKeyFile";
-            this.TxtKeyFile.Size = new System.Drawing.Size(517, 20);
+            this.TxtKeyFile.Size = new System.Drawing.Size(578, 20);
             this.TxtKeyFile.TabIndex = 9;
             this.ToolTips.SetToolTip(this.TxtKeyFile, "Path to the key file");
             // 
@@ -268,7 +268,7 @@
             this.TxtOutputAssembly.Location = new System.Drawing.Point(6, 37);
             this.TxtOutputAssembly.MaxLength = 255;
             this.TxtOutputAssembly.Name = "TxtOutputAssembly";
-            this.TxtOutputAssembly.Size = new System.Drawing.Size(517, 20);
+            this.TxtOutputAssembly.Size = new System.Drawing.Size(578, 20);
             this.TxtOutputAssembly.TabIndex = 2;
             this.ToolTips.SetToolTip(this.TxtOutputAssembly, "Path to the output generated assembly.");
             // 
@@ -278,7 +278,7 @@
             this.btnOutputPath.Cursor = System.Windows.Forms.Cursors.Hand;
             this.btnOutputPath.Image = global::ILMergeGui.Properties.Resources.IconFolder;
             this.btnOutputPath.ImeMode = System.Windows.Forms.ImeMode.NoControl;
-            this.btnOutputPath.Location = new System.Drawing.Point(529, 35);
+            this.btnOutputPath.Location = new System.Drawing.Point(590, 35);
             this.btnOutputPath.Name = "btnOutputPath";
             this.btnOutputPath.Size = new System.Drawing.Size(25, 23);
             this.btnOutputPath.TabIndex = 4;
@@ -294,7 +294,7 @@
             this.btnMerge.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.btnMerge.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.btnMerge.ImeMode = System.Windows.Forms.ImeMode.NoControl;
-            this.btnMerge.Location = new System.Drawing.Point(448, 72);
+            this.btnMerge.Location = new System.Drawing.Point(509, 72);
             this.btnMerge.Name = "btnMerge";
             this.btnMerge.Size = new System.Drawing.Size(106, 23);
             this.btnMerge.TabIndex = 10;
@@ -316,7 +316,6 @@
             this.CboDebug.Size = new System.Drawing.Size(64, 21);
             this.CboDebug.TabIndex = 6;
             this.ToolTips.SetToolTip(this.CboDebug, "Set the debug parameter.");
-            this.CboDebug.SelectedIndexChanged += new System.EventHandler(this.CboDebug_SelectedIndexChanged);
             // 
             // CboTargetFramework
             // 
@@ -331,7 +330,7 @@
             ".NET 4.0"});
             this.CboTargetFramework.Location = new System.Drawing.Point(192, 72);
             this.CboTargetFramework.Name = "CboTargetFramework";
-            this.CboTargetFramework.Size = new System.Drawing.Size(227, 21);
+            this.CboTargetFramework.Size = new System.Drawing.Size(288, 21);
             this.CboTargetFramework.TabIndex = 8;
             this.ToolTips.SetToolTip(this.CboTargetFramework, "Set the target framework.");
             // 
@@ -352,7 +351,7 @@
             this.ListAssembly.HideSelection = false;
             this.ListAssembly.Location = new System.Drawing.Point(3, 16);
             this.ListAssembly.Name = "ListAssembly";
-            this.ListAssembly.Size = new System.Drawing.Size(554, 180);
+            this.ListAssembly.Size = new System.Drawing.Size(615, 180);
             this.ListAssembly.TabIndex = 34;
             this.ToolTips.SetToolTip(this.ListAssembly, "Assemblies to be merged.");
             this.ListAssembly.UseCompatibleStateImageBehavior = false;
@@ -431,7 +430,7 @@
             this.BoxOutput.Controls.Add(this.CboTargetFramework);
             this.BoxOutput.Location = new System.Drawing.Point(12, 422);
             this.BoxOutput.Name = "BoxOutput";
-            this.BoxOutput.Size = new System.Drawing.Size(560, 101);
+            this.BoxOutput.Size = new System.Drawing.Size(621, 101);
             this.BoxOutput.TabIndex = 35;
             this.BoxOutput.TabStop = false;
             this.BoxOutput.Text = "Output";
@@ -483,7 +482,7 @@
             this.BoxOptions.Controls.Add(this.ChkCopyAttributes);
             this.BoxOptions.Location = new System.Drawing.Point(12, 264);
             this.BoxOptions.Name = "BoxOptions";
-            this.BoxOptions.Size = new System.Drawing.Size(560, 152);
+            this.BoxOptions.Size = new System.Drawing.Size(621, 152);
             this.BoxOptions.TabIndex = 34;
             this.BoxOptions.TabStop = false;
             this.BoxOptions.Text = "Options";
@@ -496,7 +495,7 @@
             this.linkLabel1.ImeMode = System.Windows.Forms.ImeMode.NoControl;
             this.linkLabel1.LinkBehavior = System.Windows.Forms.LinkBehavior.HoverUnderline;
             this.linkLabel1.LinkColor = System.Drawing.SystemColors.HotTrack;
-            this.linkLabel1.Location = new System.Drawing.Point(413, 553);
+            this.linkLabel1.Location = new System.Drawing.Point(474, 553);
             this.linkLabel1.Name = "linkLabel1";
             this.linkLabel1.Size = new System.Drawing.Size(159, 13);
             this.linkLabel1.TabIndex = 36;
@@ -510,7 +509,7 @@
             this.fileToolStripMenuItem3});
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
             this.menuStrip1.Name = "menuStrip1";
-            this.menuStrip1.Size = new System.Drawing.Size(584, 24);
+            this.menuStrip1.Size = new System.Drawing.Size(645, 24);
             this.menuStrip1.TabIndex = 38;
             this.menuStrip1.Text = "menuStrip1";
             // 
@@ -681,7 +680,7 @@
             this.groupBox1.Controls.Add(this.LblPrimaryAssembly);
             this.groupBox1.Location = new System.Drawing.Point(12, 27);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(560, 231);
+            this.groupBox1.Size = new System.Drawing.Size(621, 231);
             this.groupBox1.TabIndex = 39;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Assemblies to merge:";
@@ -724,7 +723,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(584, 575);
+            this.ClientSize = new System.Drawing.Size(645, 575);
             this.Controls.Add(this.label2);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.groupBox1);
