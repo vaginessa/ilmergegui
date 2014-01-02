@@ -1,5 +1,5 @@
 #region Header
- 
+
 /* ----------   ---   -------------------------------------------------------------------------------
  * Purpose:           Gui for Microsoft's ILMerge.
  * By:                G.W. van der Vegt (wim@vander-vegt.nl)
@@ -1244,7 +1244,7 @@ namespace ILMergeGui
 
                 regKey.Close();
             }
-            
+
             mruMenu = new MruStripMenuInline(fileToolStripMenuItem3, menuRecentFile, new MruStripMenu.ClickedHandler(OnMruFile), mruRegKey + "\\MRU", 16);
             mruMenu.LoadFromRegistry();
 
@@ -1354,6 +1354,9 @@ namespace ILMergeGui
                 mruMenu.AddFile(openFileDialog1.FileName);
                 mruMenu.SetFirstFile(mruMenu.FindFilenameNumber(openFileDialog1.FileName));
                 mruMenu.SaveToRegistry();
+
+                saveFileDialog1.InitialDirectory = Path.GetDirectoryName(openFileDialog1.FileName);
+                saveFileDialog1.FileName = Path.GetFileName(openFileDialog1.FileName);
             }
         }
 
@@ -1772,6 +1775,9 @@ namespace ILMergeGui
             if (File.Exists(filename))
             {
                 RestoreSettings(filename);
+
+                saveFileDialog1.InitialDirectory = Path.GetDirectoryName(filename);
+                saveFileDialog1.FileName = Path.GetFileName(filename);
 
                 mruMenu.SetFirstFile(number);
             }
