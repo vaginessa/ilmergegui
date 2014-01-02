@@ -5,6 +5,7 @@
     using System.Reflection;
     using System.Collections.Generic;
     using System.Diagnostics;
+    using System.ComponentModel;
 
     /*
      * 03-05-2012 - veg - Added GetProperty().
@@ -175,9 +176,27 @@
         {
             // Dynamically Invoke the method
             PropertyInfo pi = ci.type.GetProperty(PropName);
-            pi.SetValue(ci.ClassObject, (T)arg, new Object[] { });
 
-            return (T)(pi.GetValue(ci.ClassObject, new Object[] { }));
+            //Type type = typeof(T);
+            Type ptype = pi.PropertyType;
+
+            if (ptype.IsGenericType && ptype.GetGenericArguments().Length > 0 && ptype.GetGenericArguments()[0].IsEnum)
+            {
+                // Convert Int32 to Enum?
+                TypeConverter convertSet = TypeDescriptor.GetConverter(pi.PropertyType);
+                pi.SetValue(ci.ClassObject, convertSet.ConvertFrom(arg.ToString() + ""), new Object[] { });
+
+                // Convert Enum? to Int32
+                TypeConverter convertGet = TypeDescriptor.GetConverter(typeof(T));
+                int tmp = (int)(pi.GetValue(ci.ClassObject, new Object[] { }));
+                return (T)convertGet.ConvertFrom(tmp.ToString() + "");
+            }
+            else
+            {
+                pi.SetValue(ci.ClassObject, (T)arg, new Object[] { });
+
+                return (T)(pi.GetValue(ci.ClassObject, new Object[] { }));
+            }
         }
 
         private static T GetProperty<T>(DynaClassInfo ci,

@@ -117,41 +117,44 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="AssembliesMerged" xml:space="preserve">
-    <value>The assemblies were merged!</value>
-  </data>
-  <data name="Done" xml:space="preserve">
-    <value>Done</value>
-  </data>
-  <data name="Error_CantMerge" xml:space="preserve">
-    <value>Can't merge the selected files. Make sure you have selected valid .NET assemblies and have permission to write on the output directory.</value>
+  <data name="Error_MergeException" xml:space="preserve">
+    <value>There was a problem trying to merge. The output aseembly might not work as expected.</value>
   </data>
   <data name="Error_KeyFileNotExists" xml:space="preserve">
     <value>The key file specified does not exist!</value>
   </data>
-  <data name="Error_MergeException" xml:space="preserve">
-    <value>There was a problem trying to merge. The output aseembly might not work as expected.</value>
+  <data name="Error_OutputConflict" xml:space="preserve">
+    <value>The output assembly conflicts with one of the selected assemblies to merge. Please, choose a different filename.</value>
   </data>
   <data name="Error_NoOutputPath" xml:space="preserve">
     <value>Please enter the output path for the merged assembly.</value>
   </data>
-  <data name="Error_OutputConflict" xml:space="preserve">
-    <value>The output assembly conflicts with one of the selected assemblies to merge. Please, choose a different filename.</value>
-  </data>
-  <data name="Error_OutputPathInUse" xml:space="preserve">
-    <value>The output assembly path is already in use and could not be deleted.</value>
-  </data>
-  <data name="Error_Term" xml:space="preserve">
-    <value>Error</value>
+  <data name="Done" xml:space="preserve">
+    <value>Done</value>
   </data>
   <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
   <data name="IconAdd" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Images\IconAdd.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-  <data name="IconDropHere" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\IconDropHere.jpg;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  <data name="AssembliesMerged" xml:space="preserve">
+    <value>The assemblies were merged!</value>
   </data>
   <data name="IconFolder" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Images\IconFolder.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="Error_Term" xml:space="preserve">
+    <value>Error</value>
+  </data>
+  <data name="Error_CantMerge" xml:space="preserve">
+    <value>Can't merge the selected files. Make sure you have selected valid .NET assemblies and have permission to write on the output directory.</value>
+  </data>
+  <data name="Error_OutputPathInUse" xml:space="preserve">
+    <value>The output assembly path is already in use and could not be deleted.</value>
+  </data>
+  <data name="IconDropHere" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\IconDropHere.jpg;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="btn_donateCC_LG_EN" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\btn_donateCC_LG_EN.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
 </root>

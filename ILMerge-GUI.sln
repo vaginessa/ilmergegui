@@ -7,12 +7,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ILMergeGui", "ILMergeGui\IL
 		SccProvider = Plastic SCM
 	EndGlobalSection
 EndProject
-Project("{F184B08F-C81C-45F6-A57F-5ABD9991F28F}") = "ILMerge-GUI", "IlMerge-Gui\ILMerge-GUI.vbproj", "{5256EB8C-ADE3-4537-9CC4-B1AA6323CE86}"
-	GlobalSection(PlasticSccProperties) = preSolution
-		ControlledByPlastic = True
-		SccProvider = Plastic SCM
-	EndGlobalSection
-EndProject
 Global
 	GlobalSection(PlasticSccProperties) = preSolution
 		ControlledByPlastic = True
@@ -38,16 +32,6 @@ Global
 		{77B0B9CA-5284-4F13-80DE-464514948F5C}.Release|Mixed Platforms.Build.0 = Release|x86
 		{77B0B9CA-5284-4F13-80DE-464514948F5C}.Release|x86.ActiveCfg = Release|x86
 		{77B0B9CA-5284-4F13-80DE-464514948F5C}.Release|x86.Build.0 = Release|x86
-		{5256EB8C-ADE3-4537-9CC4-B1AA6323CE86}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{5256EB8C-ADE3-4537-9CC4-B1AA6323CE86}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{5256EB8C-ADE3-4537-9CC4-B1AA6323CE86}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{5256EB8C-ADE3-4537-9CC4-B1AA6323CE86}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{5256EB8C-ADE3-4537-9CC4-B1AA6323CE86}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{5256EB8C-ADE3-4537-9CC4-B1AA6323CE86}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{5256EB8C-ADE3-4537-9CC4-B1AA6323CE86}.Release|Any CPU.Build.0 = Release|Any CPU
-		{5256EB8C-ADE3-4537-9CC4-B1AA6323CE86}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{5256EB8C-ADE3-4537-9CC4-B1AA6323CE86}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{5256EB8C-ADE3-4537-9CC4-B1AA6323CE86}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
