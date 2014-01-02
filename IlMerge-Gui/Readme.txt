@@ -1,1 +1,0 @@
-This code is obsolete and no longer supported.
