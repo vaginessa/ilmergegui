@@ -1261,7 +1261,7 @@ namespace ILMergeGui
 
                     foreach (String arg1 in Environment.GetCommandLineArgs())
                     {
-                        if (arg1.Equals("/Merge", StringComparison.OrdinalIgnoreCase))
+                        if (arg1.Equals("/merge", StringComparison.OrdinalIgnoreCase))
                         {
                             btnMerge.PerformClick();
                         }
