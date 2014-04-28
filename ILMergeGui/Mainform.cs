@@ -1253,21 +1253,26 @@ namespace ILMergeGui
 
             foreach (String arg in Environment.GetCommandLineArgs())
             {
-                if (!arg.StartsWith("/") &&
-                    File.Exists(arg) &&
-                    Path.GetExtension(arg).Equals(MyExtension, StringComparison.OrdinalIgnoreCase))
+                if (!arg.StartsWith("/") && arg.EndsWith(MyExtension, StringComparison.OrdinalIgnoreCase))
                 {
-                    RestoreSettings(arg);
-
-                    foreach (String arg1 in Environment.GetCommandLineArgs())
+                    if (File.Exists(arg))
                     {
-                        if (arg1.Equals("/merge", StringComparison.OrdinalIgnoreCase))
-                        {
-                            btnMerge.PerformClick();
-                        }
-                    }
+                        RestoreSettings(arg);
 
-                    break;
+                        foreach (String arg1 in Environment.GetCommandLineArgs())
+                        {
+                            if (arg1.Equals("/merge", StringComparison.OrdinalIgnoreCase))
+                            {
+                                btnMerge.PerformClick();
+                            }
+                        }
+
+                        break;
+                    }
+                    else
+                    {
+                        MessageBox.Show(String.Format("Project File not Found:\r\n\r\n{0}", Path.GetFullPath(arg)), Application.ProductName);
+                    }
                 }
             }
 
