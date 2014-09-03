@@ -205,13 +205,19 @@
             // Dynamically Get a Property Value
             PropertyInfo pi = ci.type.GetProperty(PropName);
 
-            return (T)(pi.GetValue(ci.ClassObject, new Object[] { }));
+            Object value = pi.GetValue(ci.ClassObject, new Object[] { });
+            if (value != null)
+            {
+                return (T)(value);
+            }
+
+            return default(T);
         }
 
         // --- these is the method that you invoke ------------
 
         /// <summary>
-        /// Call a Generic tgyped Method on an (cached) Assembly.
+        /// Call a Generic typed Method on an (cached) Assembly.
         /// </summary>
         /// <typeparam name="T">The return Type</typeparam>
         /// <param name="AssemblyName">The Filename of the Assembly</param>

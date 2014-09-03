@@ -1,4 +1,4 @@
-#region Header
+﻿#region Header
 
 /* ----------   ---   -------------------------------------------------------------------------------
  * Purpose:           Gui for Microsoft's ILMerge.
@@ -41,7 +41,7 @@
  *                  - Changed logic around formatting the display values.
  *                    Reformat them all using the ListViewItem Tag property as storage for original filenames.
  *                  - Change code to use Tag property for filename (TEST!).
- * ----------   ---   ------------------------------------------------------------------------------- 
+ * ----------   ---   -------------------------------------------------------------------------------
  * 22-06-2012 - veg - Added support for dropping (sub) directories.
  *                  - Added checkboxes for primary assembly instead of selected item.
  *                  - Refactored code a bit.
@@ -59,7 +59,7 @@
  * 06-11-2013 - veg - Hopefully fixed workitem 8745.
  *                    .Net v4.5 fixup. 4.5 is an inplace upgrade of 4.0 which does not alter the version number.
  *                    See http://www.mattwrock.com/post/2012/02/29/What-you-should-know-about-running-ILMerge-on-Net-45-Beta-assemblies-targeting-Net-40.aspx
- * ----------   ---   ------------------------------------------------------------------------------- 
+ * ----------   ---   -------------------------------------------------------------------------------
  * 10-11-2013 - veg - Started on ILRepack Support.
  *                  - First implementation works
  *                    1) No Support for v2.0, v3.x and v4.5.
@@ -67,20 +67,37 @@
  *                    3) Engine not saved to configuration (*.ilproj) file.
  *                  - Made engine switchable.
  *                  - Engine saved to/restored from configuration (*.ilproj) file.
- * ----------   ---   ------------------------------------------------------------------------------- 
+ * ----------   ---   -------------------------------------------------------------------------------
  * 16-11-2013 - veg - Removed deprecated .Net Keys (v4.0 Client).
  *                  - Fixed DotNet key values.
- * ----------   ---   ------------------------------------------------------------------------------- 
+ * ----------   ---   -------------------------------------------------------------------------------
  *                    TODO MRU on MainMenu (.ilproj) seems to fail!
  *                    TODO Settings SetTargetPlatform on ILRepack leads to stack overflow.
  *                    TODO ILRepack cannot merge twice (does either not delete the output or SetInputAssemblies files are not cleared properly).
  *                    TODO Generate ILMerge.exe Commandline.
  *                    TODO Generate ILRepack.exe Commandline.
- * ----------   ---   ------------------------------------------------------------------------------- 
+ * ----------   ---   -------------------------------------------------------------------------------
  * 27-12-2012 - veg - Added new switched (internalize and mergexml) to ilproj settings.
  *                  - Added registration project file type (once, if running elevated).
  *                  - Added indication that project file type is registred or not.
- * ----------   ---   ------------------------------------------------------------------------------- 
+ * ----------   ---   -------------------------------------------------------------------------------
+ * 03-09-2014 - veg - Added automatic creation of output directory.
+ *                  - Added generated command-line examples.
+ *                  - BUG ILRepack seems to cache input assemblies and will not execute a second time.
+ *                  - Added default<T> return to GetProperty if invoked value was null.
+ * 
+ *                  - Checked supported frameworks:
+ *                  
+ *                    		            ilmerge	ilrepack
+ *                    		            ------- --------
+ *                    v2.050727 sp2 	ok	    ok
+ *                    v3.0 sp2	        no	    ok
+ *                    v3.5 sp1	        no	    ok
+ *                    v4.5 client	    ok	    ok
+ *                    v4.5 full	        ok	    ok
+ *                    
+ *                    Version 2.0.7.0.
+ * ----------   ---   -------------------------------------------------------------------------------
  */
 
 #endregion Header
@@ -89,30 +106,27 @@ namespace ILMergeGui
 {
     using System;
     using System.Collections.Generic;
+    using System.ComponentModel;
     using System.Diagnostics;
     using System.Drawing;
     using System.IO;
+    using System.Linq;
     using System.Reflection;
     using System.Runtime.InteropServices;
+    using System.Text;
     using System.Windows.Forms;
     using System.Xml;
     using System.Xml.Linq;
-    using System.Linq;
-
     using ILMergeGui.Properties;
-
     using Microsoft.Win32;
-    using System.ComponentModel;
     using Swiss;
 
     //! TODO Debug ILMerge call (Tag property).
     //! TODO Restore Groups on Xml Restore.
     //! TODO Watermark won't remove.
-
     // TODO Make sure dialogs are cleaned before re-use.
     // TODO Add commandline options (cfg & /Merge).
     // TODO Find out what ILMerge commandline options actually mean.
-
     // TODO Detect CF Framework (C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework)
     // TODO Detect MicroFramework (MicroFrameworkPK_v4_1).
     //       HKEY_CURRENT_USER\Software\Microsoft\VisualStudio\10.0_Config\MSBuild\SafeImports
@@ -124,16 +138,13 @@ namespace ILMergeGui
     //
     //       x86 = C:\Windows\Microsoft.NET\Framework
     //       x64 = C:\Windows\Microsoft.NET\Framework64
-
     // TODO Windows Communication Foundation
     // TODO Windows Presentation Foundation
     // TODO Windows Workflow Foundation
     // TODO Advanced Settings?
     // TODO List special features under v3.0 as Windows Workflow Foundationn.
-
     //! TODO Support for Version 1/1.1
     //! TODO http://support.microsoft.com/kb/318785/en-us
-
     //! Reflected methods from ilMerge.exe assembly:
     //public bool AllowMultipleAssemblyLevelAttributes { set; get; }
     //public bool AllowWildCards { set; get; }
@@ -150,7 +161,6 @@ namespace ILMergeGui
     //public bool XmlDocumentation { set; get; }
     //public void AllowDuplicateType(string typeName)
     //public void SetSearchDirectories(string[] dirs)
-
     public partial class Mainform : Form
     {
         #region Fields
@@ -159,6 +169,13 @@ namespace ILMergeGui
         /// Used for ListView.
         /// </summary>
         private const uint CLR_NONE = 0xFFFFFFFF;
+        const String MyAppName = "ILMergeGui";
+        const String MyExtension = ".ilproj";
+        const String MyWildcard = "*" + MyExtension;
+
+        private DotNet framework;
+        private String frameversion;
+        private List<String> arrAssemblies;
 
         /// <summary>
         /// Storage for Available DotNet Frameworks.
@@ -184,19 +201,6 @@ namespace ILMergeGui
         #endregion Constructors
 
         #region Enumerations
-
-        [Description("Merging Application")]
-        internal enum Merger
-        {
-            [Description("No Merging Application")]
-            None,
-
-            [Description("Microsoft's IL-Merge")]
-            ILMerge,
-
-            [Description("Mono Based IL-Repack")]
-            ILRepack
-        }
 
         /// <summary>
         /// http://social.msdn.microsoft.com/forums/en-US/winforms/thread/86d8a8bf-8bc0-4567-970b-19a96b0e9b7c/
@@ -386,6 +390,19 @@ namespace ILMergeGui
             EX_DOUBLEBUFFER = 0x00010000
         }
 
+        [Description("Merging Application")]
+        internal enum Merger
+        {
+            [Description("No Merging Application")]
+            None,
+
+            [Description("Microsoft's IL-Merge")]
+            ILMerge,
+
+            [Description("Mono Based IL-Repack")]
+            ILRepack
+        }
+
         #endregion Enumerations
 
         #region Properties
@@ -428,15 +445,6 @@ namespace ILMergeGui
         }
 
         /// <summary>
-        /// Type of Merge Executable.
-        /// </summary>
-        internal Merger Engine
-        {
-            get;
-            set;
-        }
-
-        /// <summary>
         /// Filename of the Primary Assembly (exe).
         /// </summary>
         public String Primary
@@ -445,9 +453,140 @@ namespace ILMergeGui
             private set;
         }
 
+        /// <summary>
+        /// The Application's Directory
+        /// </summary>
+        internal static String AppDir
+        {
+            get
+            {
+                return Path.GetDirectoryName(Application.ExecutablePath);
+            }
+        }
+
+        /// <summary>
+        /// The Applications Title. 
+        /// 
+        /// It is either the ProductName or derived from the 
+        /// last part of the Application's Directory.
+        /// </summary>
+        internal static String AppTitle
+        {
+            get
+            {
+                String Result = String.Empty;
+
+                if (String.IsNullOrEmpty(Application.ProductName))
+                {
+                    String[] split = AppDir.Split(Path.DirectorySeparatorChar);
+                    Result = Path.ChangeExtension(split[split.Length - 1], "");
+                }
+                else
+                {
+                    Result = Application.ProductName;
+                }
+
+                return Result;
+            }
+        }
+
+        /// <summary>
+        /// Type of Merge Executable.
+        /// </summary>
+        internal Merger Engine
+        {
+            get;
+            set;
+        }
+
         #endregion Properties
 
         #region Methods
+
+        /// <summary>
+        /// Registers ILMerge File Type.
+        /// </summary>
+        /// <returns>true if successfull</returns>
+        public static Boolean DetectIlProj()
+        {
+            //TODO Should this be HKEY_CURRENT_USER\Software\Classes or HKEY_LOCAL_MACHINE\Software\Classes?
+            //     See http://social.msdn.microsoft.com/Forums/en/netfxbcl/thread/630ed1d9-73f1-4cc0-bc84-04f29cffc13b
+
+            using (RegistryKey rk = Registry.ClassesRoot.OpenSubKey(MyExtension, false))
+            {
+                if (rk == null)
+                {
+                    return false;
+                }
+
+                // Check Our own filetype
+                if (rk.GetValue(null) == null || !rk.GetValue(null).Equals(MyAppName + "_file"))
+                {
+                    return false;
+                }
+
+                // Check Mime type...
+                if (rk.GetValue("Content Type") == null || !rk.GetValue("Content Type").Equals(String.Format("application/{0}", MyAppName.ToLower())))
+                {
+                    return false;
+                }
+
+                using (RegistryKey rk2 = Registry.ClassesRoot.OpenSubKey(@"\" + MyAppName + "_file", false))
+                {
+                    if (rk2 == null)
+                    {
+                        return false;
+                    }
+
+                    // Check Assignment of hottack.net to *.hot files
+                    if (rk2.GetValue(null) == null || !rk2.GetValue(null).Equals(MyAppName + " File"))
+                    {
+                        return false;
+                    }
+
+                    // Check editflags
+                    if (rk2.GetValue("EditFlags") == null)
+                    {
+                        return false;
+                    }
+
+                    // Check Show extension
+                    if (rk2.GetValue("AlwaysShowExt") == null)
+                    {
+                        return true;
+                    }
+
+                    // Check the icon to a large application one
+                    using (RegistryKey rk3 = rk2.OpenSubKey("DefaultIcon", false))
+                    {
+                        if (rk3 == null || rk3.GetValue(null) == null || !rk3.GetValue(null).ToString().Equals(Application.ExecutablePath + ",0", StringComparison.OrdinalIgnoreCase))
+                        {
+                            return false;
+                        }
+                    }
+
+                    // Check the open verb
+                    using (RegistryKey rk4 = rk2.OpenSubKey(@"shell\open\command", false))
+                    {
+                        if (rk4 == null || rk4.GetValue(null) == null || !rk4.GetValue(null).ToString().Equals("\"" + Application.ExecutablePath + "\"" + " \"%1\"", StringComparison.OrdinalIgnoreCase))
+                        {
+                            return false;
+                        }
+                    }
+
+                    // Check the merge verb
+                    using (RegistryKey rk5 = rk2.OpenSubKey(@"shell\merge\command", false))
+                    {
+                        if (rk5 == null || rk5.GetValue(null) == null || !rk5.GetValue(null).ToString().Equals("\"" + Application.ExecutablePath + "\"" + " \"%1\" /Merge", StringComparison.OrdinalIgnoreCase))
+                        {
+                            return false;
+                        }
+                    }
+                }
+            }
+
+            return true;
+        }
 
         /// <summary>
         /// Enumerate available x86 and x64 DotNet Framework Versions.
@@ -515,6 +654,150 @@ namespace ILMergeGui
             {
                 return relativePath.Replace('/', Path.DirectorySeparatorChar);
             }
+        }
+
+        /// <summary>
+        /// Register File Type and Application.
+        /// </summary>
+        /// <returns>True if successfull</returns>
+        public static Boolean RegisterIlProj()
+        {
+            if (DetectIlProj())
+            {
+                return true;
+            }
+
+            try
+            {
+                using (RegistryKey rk1 = Registry.ClassesRoot.CreateSubKey(MyExtension))
+                {
+
+                    // Register our own filetype
+                    if (rk1 != null)
+                    {
+                        // Assign hottack.net to *.hot files
+                        if (rk1.GetValue(null) == null ||
+                            !rk1.GetValue(null).Equals(MyAppName + "_file"))
+                        {
+                            //(Default) value.
+                            rk1.SetValue(null, MyAppName + "_file");
+                        }
+
+                        // Propose a new mime type...
+                        if (rk1.GetValue("Content Type") == null ||
+                            !rk1.GetValue("Content Type").Equals(String.Format("application/{0}", MyAppName.ToLower())))
+                        {
+                            rk1.SetValue("Content Type", String.Format("application/{0}", MyAppName.ToLower()));
+                        }
+                    }
+                    else
+                    {
+                        return false;
+                    }
+
+                    using (RegistryKey rk2 = Registry.ClassesRoot.CreateSubKey(MyAppName + "_file"))
+                    {
+                        // Register our own filetype
+                        if (rk2 != null)
+                        {
+                            // Assign hottack.net to *.hot files
+                            if (rk2.GetValue(null) == null ||
+                                !rk2.GetValue(null).Equals(MyAppName + " File"))
+                            {
+                                rk2.SetValue(null, MyAppName + " File");
+                            }
+
+                            // Purpose of editflags unknown
+                            if (rk2.GetValue("EditFlags") == null)
+                            {
+                                rk2.SetValue("EditFlags", new Byte[4] { 0, 0, 0, 0 }, RegistryValueKind.Binary);
+                            }
+
+                            // Always show extension
+                            if (rk2.GetValue("AlwaysShowExt") == null)
+                            {
+                                rk2.SetValue("AlwaysShowExt", String.Empty);
+                            }
+
+                            // Change the icon to a large application one
+                            using (RegistryKey rk3 = rk2.CreateSubKey("DefaultIcon"))
+                            {
+                                if (rk3 != null)
+                                {
+                                    if (rk3.GetValue(null) == null ||
+                                        !rk3.GetValue(null).Equals(Application.ExecutablePath + ",0"))
+                                    {
+                                        rk3.SetValue(null, Application.ExecutablePath + ",0");
+                                    }
+                                }
+                                else
+                                {
+                                    return false;
+                                }
+
+                            }
+
+                            // Add the open verb
+                            using (RegistryKey rk4 = rk2.CreateSubKey(@"shell\open\command"))
+                            {
+                                if (rk4 != null)
+                                {
+                                    if (rk4.GetValue(null) == null ||
+                                        !rk4.GetValue(null).Equals("\"" + Application.ExecutablePath + "\"" + " \"%1\""))
+                                    {
+                                        rk4.SetValue(null, "\"" + Application.ExecutablePath + "\"" + " \"%1\"");
+                                    }
+                                }
+                                else
+                                {
+                                    return false;
+                                }
+                            }
+
+                            // Add the merge verb
+                            using (RegistryKey rk4 = rk2.CreateSubKey(@"shell\merge\command"))
+                            {
+                                if (rk4 != null)
+                                {
+                                    if (rk4.GetValue(null) == null ||
+                                        !rk4.GetValue(null).Equals("\"" + Application.ExecutablePath + "\"" + " \"%1\" /Merge"))
+                                    {
+                                        rk4.SetValue(null, "\"" + Application.ExecutablePath + "\"" + " \"%1\" /Merge");
+                                    }
+                                }
+                                else
+                                {
+                                    return false;
+                                }
+                            }
+
+                            //TODO ilproj_auto_file|shell|open|command|(Default)=Executable?
+                            //     Not clear what creates this key. Created by Explorer's Open Width Context MenuItem?
+
+                            //TODO HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\.ilproj
+                            //     If old code does not work, above key is probably present (controlled by Explorer's Open Width Context MenuItem).
+
+                            //TODO HKEY_CLASSES_ROOT\Applications\ILMergeGui.exe
+                            //     Created by Explorer's Open Width Context MenuItem.
+
+                            //{$IFDEF SHLWAPI}
+                            //            //Let Windows Udate Explorer
+                            //            SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, nil, nil);
+                            //{$ENDIF SHLWAPI}
+                        }
+                        else
+                        {
+                            return false;
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                return false;
+            }
+
+            return true;
         }
 
         /// <summary>
@@ -682,6 +965,11 @@ namespace ILMergeGui
             return frameworkpath;
         }
 
+        private void aboutToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            new AboutDialog().ShowDialog();
+        }
+
         private void btnAddFile_Click(object sender, EventArgs e)
         {
             openFile1.CheckFileExists = true;
@@ -726,19 +1014,23 @@ namespace ILMergeGui
                 return;
             }
 
-
             //! TODO Nicely find ILMerge.
             if (!DynaInvoke.PreLoadAssembly(iLMergePath, ilMerge))
             {
                 return;
             }
 
-            List<String> arrAssemblies = new List<String>();
+            arrAssemblies = new List<String>();
 
             PreMerge();
 
+            if (!String.IsNullOrWhiteSpace(TxtOutputAssembly.Text) && !Directory.Exists(Path.GetDirectoryName(TxtOutputAssembly.Text.Trim())))
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(TxtOutputAssembly.Text.Trim()));
+            }
+
             //! [workitem:8741]
-            if (String.IsNullOrWhiteSpace(TxtOutputAssembly.Text) || !Directory.Exists(Path.GetDirectoryName(TxtOutputAssembly.Text)))
+            if (String.IsNullOrWhiteSpace(TxtOutputAssembly.Text) || !Directory.Exists(Path.GetDirectoryName(TxtOutputAssembly.Text.Trim())))
             {
                 MessageBox.Show(Resources.Error_NoOutputPath, Resources.Error_Term, MessageBoxButtons.OK, MessageBoxIcon.Error);
                 TxtOutputAssembly.Focus();
@@ -824,7 +1116,7 @@ namespace ILMergeGui
 
             if (ChkGenerateLog.Checked)
             {
-                Console.WriteLine("{0}.{1}={2}", ilMerge, "DelaySign", DynaInvoke.SetProperty<Boolean>(iLMergePath, ilMerge, "Log", ChkGenerateLog.Checked).ToString());
+                Console.WriteLine("{0}.{1}={2}", ilMerge, "Log", DynaInvoke.SetProperty<Boolean>(iLMergePath, ilMerge, "Log", ChkGenerateLog.Checked).ToString());
                 Console.WriteLine("{0}.{1}={2}", ilMerge, "LogFile", DynaInvoke.SetProperty(iLMergePath, ilMerge, "LogFile", TxtLogFile.Text));
             }
 
@@ -833,9 +1125,9 @@ namespace ILMergeGui
             //! This must be done better!!
             //! TODO Enumerate Frameworks and find correct directories under Program Files.
 
-            DotNet framework = (DotNet)CboTargetFramework.SelectedItem;
+            framework = (DotNet)CboTargetFramework.SelectedItem;
 
-            String frameversion = String.Format("{0}.{1}", framework.version.Major, framework.version.Minor);
+            frameversion = String.Format("{0}.{1}", framework.version.Major, framework.version.Minor);
 
             //! .Net v4.5 fixup. 4.5 is an inplace upgrade of 4.0 which does not alter the version number.
             //! [workitem:8745]
@@ -844,7 +1136,9 @@ namespace ILMergeGui
                 frameversion = "4.0";
             }
 
-            //! Fixups for ILRepack (does not support .NET 3/3.5 or 4.5 it seems), 
+            String ff = frameversion;
+
+            //! Fixups for ILRepack (does not support .NET 3/3.5 or 4.5 it seems),
             //! It uses the registry keys and does not support v2.0, v3.0, v3.5 or v4.5.
             //
             //  case "v1":   runtime = TargetRuntime.Net_1_0; break;
@@ -860,23 +1154,32 @@ namespace ILMergeGui
                 //! String.Format("v{0}", framework.version.Major);
             }
 
-            if (Environment.Is64BitOperatingSystem)
+            try
             {
-                Console.WriteLine("{0}.{1}('{2}', '{3}')",
-                    ilMerge,
-                    "SetTargetPlatform",
-                    frameversion,
-                    framework.x64WindowsPath);
-                DynaInvoke.CallMethod<Object>(iLMergePath, ilMerge, "SetTargetPlatform", new String[] { frameversion, framework.x64WindowsPath });
+                if (Environment.Is64BitOperatingSystem)
+                {
+                    Console.WriteLine("{0}.{1}('{2}', '{3}')",
+                        ilMerge,
+                        "SetTargetPlatform",
+                        frameversion,
+                        framework.x64WindowsPath);
+                    DynaInvoke.CallMethod<Object>(iLMergePath, ilMerge, "SetTargetPlatform", new String[] { frameversion, framework.x64WindowsPath });
+                }
+                else
+                {
+                    Console.WriteLine("{0}.{1}('{2}', '{3}')",
+                        ilMerge,
+                        "SetTargetPlatform",
+                        frameversion,
+                        framework.x86WindowsPath);
+                    DynaInvoke.CallMethod<Object>(iLMergePath, ilMerge, "SetTargetPlatform", new String[] { frameversion, framework.x86WindowsPath });
+                }
             }
-            else
+            catch (TargetInvocationException)
             {
-                Console.WriteLine("{0}.{1}('{2}', '{3}')",
-                    ilMerge,
-                    "SetTargetPlatform",
-                    frameversion,
-                    framework.x86WindowsPath);
-                DynaInvoke.CallMethod<Object>(iLMergePath, ilMerge, "SetTargetPlatform", new String[] { frameversion, framework.x86WindowsPath });
+                MessageBox.Show(String.Format(Resources.Error_Framework, ff, ilMerge), Resources.Error_Term, MessageBoxButtons.OK, MessageBoxIcon.Error);
+
+                return;
             }
 
             //Console.WriteLine("{0}.{1}={2}",ilMerge, "Version", DynaInvoke.GetProperty<Version>(iLMergePath, ilMerge, "Version"));
@@ -907,6 +1210,7 @@ namespace ILMergeGui
             }
             Console.WriteLine("{0}.{1}={2}", ilMerge, "OutputFile", DynaInvoke.SetProperty<String>(iLMergePath, ilMerge, "OutputFile", TxtOutputAssembly.Text));
 
+            // Clear input assemblies.
             Console.WriteLine("{0}.{1}(", ilMerge, "SetInputAssemblies");
             foreach (String asm in arrAssemblies)
             {
@@ -916,15 +1220,154 @@ namespace ILMergeGui
 
             DynaInvoke.CallMethod<Object>(iLMergePath, ilMerge, "SetInputAssemblies", new Object[] { arrAssemblies.ToArray() });
 
+            if (ChkGenCmdLine.Checked)
+            {
+                String cmdFile = Path.Combine(
+                        Path.GetDirectoryName(TxtOutputAssembly.Text.Trim()),
+                        Path.ChangeExtension(Path.GetFileName(TxtOutputAssembly.Text.Trim()), ".txt"));
+
+                File.WriteAllText(cmdFile, DoGenerateCmdLine());
+
+                Process.Start(new ProcessStartInfo(cmdFile));
+            }
+
             //Cursor = Cursors.WaitCursor
             EnableForm(false);
 
             WorkerILMerge.RunWorkerAsync();
         }
 
+        private String DoGenerateCmdLine()
+        {
+            StringBuilder sb = new StringBuilder();
+
+            // ilmerge 
+            sb.AppendLine(String.Format("\"{0}\"", iLMergePath));
+
+            //! [/lib:directory]* 
+
+            // [/log[:filename]] 
+            if (DynaInvoke.GetProperty<Boolean>(iLMergePath, ilMerge, "Log"))
+            {
+                if (DynaInvoke.GetProperty<Boolean>(iLMergePath, ilMerge, "LogFile"))
+                {
+                    sb.AppendLine(String.Format("/log:\"{0}\"", DynaInvoke.GetProperty<Boolean>(iLMergePath, ilMerge, "LogFile")));
+                }
+                else
+                {
+                    sb.AppendLine("/log");
+                }
+            }
+
+            // [/keyfile:filename [/delaysign]] 
+            if (ChkSignKeyFile.Checked)
+            {
+                sb.AppendLine(String.Format("/keyfile:\"{0}\"", DynaInvoke.GetProperty<String>(iLMergePath, ilMerge, "KeyFile")));
+                if (DynaInvoke.GetProperty<Boolean>(iLMergePath, ilMerge, "DelaySign"))
+                {
+                    sb.AppendLine("/delaysign");
+                }
+            }
+
+            // [/internalize[:filename]] 
+            if (DynaInvoke.GetProperty<Boolean>(iLMergePath, ilMerge, "Internalize"))
+            {
+                sb.AppendLine("/internalize");
+            }
+
+            // [/t[arget]:(library|exe|winexe)] 
+            Int32 t = 3;
+            switch (t)
+            {
+                // Dll,                  0
+                case 0:
+                    sb.AppendLine("/target:library");
+                    break;
+                // Exe,                  1
+                case 1:
+                    sb.AppendLine("/target:exe");
+                    break;
+                // WinExe,               2
+                case 2:
+                    sb.AppendLine("/target:winexe");
+                    break;
+                // SameAsPrimaryAssembly 3
+                case 3:
+                    // sb.AppendLine("/target:SameAsPrimaryAssembly");
+                    break;
+            }
+
+            //! [/closed] 
+
+            // [/ndebug] 
+            if (!DynaInvoke.GetProperty<Boolean>(iLMergePath, ilMerge, "DebugInfo"))
+            {
+                sb.AppendLine("/ndebug");
+            }
+
+            //! [/ver:version] 
+
+            // [/copyattrs [/allowMultiple] [/keepFirst]] 
+            if (DynaInvoke.GetProperty<Boolean>(iLMergePath, ilMerge, "CopyAttributes"))
+            {
+                sb.AppendLine("/copyattrs");
+            }
+
+            // [/xmldocs] 
+            if (DynaInvoke.GetProperty<Boolean>(iLMergePath, ilMerge, "XmlDocumentation"))
+            {
+                sb.AppendLine("/xmldocs");
+            }
+
+            //! [/attr:filename] 
+
+            // [/targetplatform:<version>[,<platformdir>] | /v1 | /v1.1 | /v2 | /v4] 
+            sb.AppendLine(String.Format("/targetplatform:{0},\"{1}\"", frameversion, Environment.Is64BitOperatingSystem ? framework.x64WindowsPath : framework.x86WindowsPath));
+
+            //! [/useFullPublicKeyForReferences] 
+
+            //! [/wildcards] 
+
+            //! [/zeroPeKind] 
+
+            //! [/allowDup:type]*
+
+            // [/union] 
+            if (DynaInvoke.GetProperty<Boolean>(iLMergePath, ilMerge, "UnionMerge"))
+            {
+                sb.AppendLine("/union");
+            }
+
+            //! [/align:n] 
+
+            // /out:filename 
+            sb.AppendLine(String.Format("/out:\"{0}\"", DynaInvoke.GetProperty<String>(iLMergePath, ilMerge, "OutputFile")));
+
+            //<primary assembly> [<other assemblies>...]
+            sb.AppendLine();
+            sb.AppendLine(String.Format("     \"{0}\"", arrAssemblies.First()));
+            sb.AppendLine();
+            foreach (String asm in arrAssemblies.Skip(1))
+            {
+                sb.AppendLine(String.Format("     \"{0}\"", asm));
+            }
+
+            return sb.ToString();
+        }
+
         private void btnOutputPath_Click(object sender, EventArgs e)
         {
             SelectOutputFile();
+        }
+
+        private void CboDebug_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            //
+        }
+
+        private void checkForUpdatesToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ClickOnceUpdater.InstallUpdateSyncWithInfo("http://ilmergegui.codeplex.com/releases/view/latest");
         }
 
         private void ChkGenerateLog_CheckedChanged(object sender, EventArgs e)
@@ -997,6 +1440,34 @@ namespace ILMergeGui
             }
         }
 
+        private void ListAssembly_ItemCheck(object sender, ItemCheckEventArgs e)
+        {
+            if (e.NewValue == CheckState.Checked)
+            {
+                ListAssembly.BeginUpdate();
+                foreach (ListViewItem lvi in ListAssembly.CheckedItems)
+                {
+                    if (lvi.Index != e.Index)
+                    {
+                        lvi.Checked = false;
+                        lvi.Selected = false;
+                    }
+                }
+
+                foreach (ListViewItem lvi in ListAssembly.Items)
+                {
+                    lvi.Selected = lvi.Index == e.Index;
+                }
+
+                ListAssembly.EndUpdate();
+            }
+        }
+
+        private void ListAssembly_ItemChecked(object sender, ItemCheckedEventArgs e)
+        {
+            UpdatePrimary();
+        }
+
         private void ListAssembly_KeyDown(object sender, KeyEventArgs e)
         {
             Int32 ndx = 0;
@@ -1024,77 +1495,54 @@ namespace ILMergeGui
             SetWaterMark(ListAssembly.Items.Count == 0);
         }
 
-        private void UpdatePrimary()
+        private void LocateEngine(Merger merger)
         {
-            btnMerge.Enabled = ListAssembly.Items.Count > 0;
-
-            if (ListAssembly.CheckedItems != null && ListAssembly.CheckedItems.Count > 0)
+            switch (merger)
             {
-                Primary = (String)ListAssembly.CheckedItems[0].Tag;
-                if (Path.GetFileName(Primary) != LblPrimaryAssembly.Text)
-                {
-                    LblPrimaryAssembly.Text = Path.GetFileName(Primary);
-                }
+                case Merger.ILMerge:
+                    LocateIlMerge();
+                    break;
+                case Merger.ILRepack:
+                    LocateIlRepack();
+                    break;
+            }
+
+            if (File.Exists(iLMergePath))
+            {
+                label1.Text = String.Format("{0}: v{1}", Path.GetFileNameWithoutExtension(iLMergePath), AssemblyName.GetAssemblyName(iLMergePath).Version.ToString());
             }
             else
             {
-                Primary = String.Empty;
-                if ("···" != LblPrimaryAssembly.Text)
-                {
-                    LblPrimaryAssembly.Text = "···";
-                }
+                label1.Text = String.Format("{0}: {1}", merger.ToString(), "not found.");
             }
         }
 
-        private void LocateIlRepack()
+        private void LocateEngines()
         {
-            iLMergePath = String.Empty;
+            Engine = Merger.None;
 
-            Debug.Print("[ILRepack]");
+            LocateEngine(Merger.ILRepack);
+            LocateEngine(Merger.ILMerge);
 
-            if (File.Exists(@".\ILRepack.exe"))
+            switch (Engine)
             {
-                iLMergePath = Path.GetFullPath(@".\ILRepack.exe");
-
-                Debug.Print("ILRepack Location Method=Current Directory");
-                Debug.Print("ILRepack Path={0}", iLMergePath);
-            }
-            else
-            {
-                String path = System.Environment.GetEnvironmentVariable("Path");
-                String[] folders = path.Split(';');
-                foreach (String folder in folders)
-                {
-                    if (Directory.Exists(folder))
-                    {
-                        foreach (String file in Directory.GetFiles(folder, "ILRepack.exe"))
-                        {
-                            iLMergePath = Path.Combine(folder, file);
-                            Debug.Print("ILRepack Location Method=%Path%");
-                            Debug.Print("ILRepack Path={0}", iLMergePath);
-                            break;
-                        }
-                    }
-                    else
-                    {
-                        //! These folders are missing on the FileSyetem.
-                        //Debug.Print(folder);
-                    }
-                }
+                case Merger.ILMerge:
+                    radioButton1.Checked = true;
+                    break;
+                case Merger.ILRepack:
+                    radioButton2.Checked = true;
+                    break;
             }
 
-            if (String.IsNullOrEmpty(iLMergePath))
+            if (Engine != Merger.None)
             {
-                Debug.Print("ILRepack not found");
-            }
-            else
-            {
-                Engine = Merger.ILRepack;
-
-                radioButton2.Enabled = true;
+                LocateEngine(Engine);
             }
 
-            Debug.Print(String.Empty);
+            if (String.IsNullOrEmpty(iLMergePath) || !File.Exists(iLMergePath))
+            {
+                MessageBox.Show("IlMerge/Repack could not be located, please reinstall ILMerge/Repack!", "ILMergeGui", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private void LocateIlMerge()
@@ -1198,6 +1646,57 @@ namespace ILMergeGui
             Debug.Print(String.Empty);
         }
 
+        private void LocateIlRepack()
+        {
+            iLMergePath = String.Empty;
+
+            Debug.Print("[ILRepack]");
+
+            if (File.Exists(@".\ILRepack.exe"))
+            {
+                iLMergePath = Path.GetFullPath(@".\ILRepack.exe");
+
+                Debug.Print("ILRepack Location Method=Current Directory");
+                Debug.Print("ILRepack Path={0}", iLMergePath);
+            }
+            else
+            {
+                String path = System.Environment.GetEnvironmentVariable("Path");
+                String[] folders = path.Split(';');
+                foreach (String folder in folders)
+                {
+                    if (Directory.Exists(folder))
+                    {
+                        foreach (String file in Directory.GetFiles(folder, "ILRepack.exe"))
+                        {
+                            iLMergePath = Path.Combine(folder, file);
+                            Debug.Print("ILRepack Location Method=%Path%");
+                            Debug.Print("ILRepack Path={0}", iLMergePath);
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        //! These folders are missing on the FileSyetem.
+                        //Debug.Print(folder);
+                    }
+                }
+            }
+
+            if (String.IsNullOrEmpty(iLMergePath))
+            {
+                Debug.Print("ILRepack not found");
+            }
+            else
+            {
+                Engine = Merger.ILRepack;
+
+                radioButton2.Enabled = true;
+            }
+
+            Debug.Print(String.Empty);
+        }
+
         private void Mainform_Load(object sender, EventArgs e)
         {
             Boolean registered = RegisterIlProj();
@@ -1232,7 +1731,6 @@ namespace ILMergeGui
                 String.Format((registered ? "({0} extension registered)" : "({0} extension not registered, run elevated once)"), MyExtension));
 
             RestoreDefaults();
-
 
             //Mru Code
             RegistryKey regKey = Registry.CurrentUser.OpenSubKey(mruRegKey);
@@ -1288,59 +1786,14 @@ namespace ILMergeGui
             }
         }
 
-        private void LocateEngines()
-        {
-            Engine = Merger.None;
-
-            LocateEngine(Merger.ILRepack);
-            LocateEngine(Merger.ILMerge);
-
-            switch (Engine)
-            {
-                case Merger.ILMerge:
-                    radioButton1.Checked = true;
-                    break;
-                case Merger.ILRepack:
-                    radioButton2.Checked = true;
-                    break;
-            }
-
-            if (Engine != Merger.None)
-            {
-                LocateEngine(Engine);
-            }
-
-            if (String.IsNullOrEmpty(iLMergePath) || !File.Exists(iLMergePath))
-            {
-                MessageBox.Show("IlMerge/Repack could not be located, please reinstall ILMerge/Repack!", "ILMergeGui", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private void LocateEngine(Merger merger)
-        {
-            switch (merger)
-            {
-                case Merger.ILMerge:
-                    LocateIlMerge();
-                    break;
-                case Merger.ILRepack:
-                    LocateIlRepack();
-                    break;
-            }
-
-            if (File.Exists(iLMergePath))
-            {
-                label1.Text = String.Format("{0}: v{1}", Path.GetFileNameWithoutExtension(iLMergePath), AssemblyName.GetAssemblyName(iLMergePath).Version.ToString());
-            }
-            else
-            {
-                label1.Text = String.Format("{0}: {1}", merger.ToString(), "not found.");
-            }
-        }
-
         private void Mainform_Shown(object sender, EventArgs e)
         {
             ListAssembly.Focus();
+        }
+
+        private void mnuFileExit_Click(object sender, EventArgs e)
+        {
+            Application.Exit();
         }
 
         private void mnuFileNew_Click(object sender, EventArgs e)
@@ -1363,6 +1816,43 @@ namespace ILMergeGui
                 saveFileDialog1.InitialDirectory = Path.GetDirectoryName(openFileDialog1.FileName);
                 saveFileDialog1.FileName = Path.GetFileName(openFileDialog1.FileName);
             }
+        }
+
+        private void mnuFileSave_Click(object sender, EventArgs e)
+        {
+            if (saveFileDialog1.ShowDialog() == DialogResult.OK)
+            {
+                SaveSettings(saveFileDialog1.FileName);
+            }
+        }
+
+        private void OnMruFile(int number, String filename)
+        {
+            if (File.Exists(filename))
+            {
+                RestoreSettings(filename);
+
+                saveFileDialog1.InitialDirectory = Path.GetDirectoryName(filename);
+                saveFileDialog1.FileName = Path.GetFileName(filename);
+
+                mruMenu.SetFirstFile(number);
+            }
+            else
+            {
+                DialogResult result = MessageBox.Show(
+                             "The file:\n\n'" + filename
+                             + "'\n\ncannot be opened.\n\n"
+                             + "Remove this file from the MRU list?"
+                             , AppTitle
+                             , MessageBoxButtons.YesNo);
+
+                if (result == DialogResult.Yes)
+                {
+                    mruMenu.RemoveFile(number);
+                }
+            }
+
+            mruMenu.SaveToRegistry();
         }
 
         /// <summary>
@@ -1423,7 +1913,6 @@ namespace ILMergeGui
 
                             lvi.SubItems.Add(AssemblyName.GetAssemblyName(filenames[i]).Version.ToString());
 
-
                             lvi.Tag = filenames[i];
                             lvi.Group = ListAssembly.Groups[strExtension];
                         }
@@ -1461,6 +1950,22 @@ namespace ILMergeGui
             ListAssembly.EndUpdate();
 
             UseWaitCursor = false;
+        }
+
+        private void radioButton1_CheckedChanged(object sender, EventArgs e)
+        {
+            if (((RadioButton)sender).Checked)
+            {
+                LocateEngine(Merger.ILMerge);
+            }
+        }
+
+        private void radioButton2_CheckedChanged(object sender, EventArgs e)
+        {
+            if (((RadioButton)sender).Checked)
+            {
+                LocateEngine(Merger.ILRepack);
+            }
         }
 
         private void RestoreDefaults()
@@ -1644,14 +2149,6 @@ namespace ILMergeGui
                 Path.GetFileName(filename));
         }
 
-        private void mnuFileSave_Click(object sender, EventArgs e)
-        {
-            if (saveFileDialog1.ShowDialog() == DialogResult.OK)
-            {
-                SaveSettings(saveFileDialog1.FileName);
-            }
-        }
-
         /// <summary>
         /// Select a Key File.
         /// </summary>
@@ -1738,306 +2235,6 @@ namespace ILMergeGui
             openFile1.FileName = filter.Substring(filter.IndexOf('|') + 1);
         }
 
-        /// <summary>
-        /// The Application's Directory
-        /// </summary>
-        internal static String AppDir
-        {
-            get
-            {
-                return Path.GetDirectoryName(Application.ExecutablePath);
-            }
-        }
-
-        /// <summary>
-        /// The Applications Title. 
-        /// 
-        /// It is either the ProductName or derived from the 
-        /// last part of the Application's Directory.
-        /// </summary>
-        internal static String AppTitle
-        {
-            get
-            {
-                String Result = String.Empty;
-
-                if (String.IsNullOrEmpty(Application.ProductName))
-                {
-                    String[] split = AppDir.Split(Path.DirectorySeparatorChar);
-                    Result = Path.ChangeExtension(split[split.Length - 1], "");
-                }
-                else
-                {
-                    Result = Application.ProductName;
-                }
-
-                return Result;
-            }
-        }
-
-        private void OnMruFile(int number, String filename)
-        {
-            if (File.Exists(filename))
-            {
-                RestoreSettings(filename);
-
-                saveFileDialog1.InitialDirectory = Path.GetDirectoryName(filename);
-                saveFileDialog1.FileName = Path.GetFileName(filename);
-
-                mruMenu.SetFirstFile(number);
-            }
-            else
-            {
-                DialogResult result = MessageBox.Show(
-                             "The file:\n\n'" + filename
-                             + "'\n\ncannot be opened.\n\n"
-                             + "Remove this file from the MRU list?"
-                             , AppTitle
-                             , MessageBoxButtons.YesNo);
-
-                if (result == DialogResult.Yes)
-                {
-                    mruMenu.RemoveFile(number);
-                }
-            }
-
-            mruMenu.SaveToRegistry();
-        }
-
-        const String MyAppName = "ILMergeGui";
-        const String MyExtension = ".ilproj";
-        const String MyWildcard = "*" + MyExtension;
-
-        /// <summary>
-        /// Registers ILMerge File Type.
-        /// </summary>
-        /// <returns>true if successfull</returns>
-        static public Boolean DetectIlProj()
-        {
-            //TODO Should this be HKEY_CURRENT_USER\Software\Classes or HKEY_LOCAL_MACHINE\Software\Classes?
-            //     See http://social.msdn.microsoft.com/Forums/en/netfxbcl/thread/630ed1d9-73f1-4cc0-bc84-04f29cffc13b
-
-            using (RegistryKey rk = Registry.ClassesRoot.OpenSubKey(MyExtension, false))
-            {
-                if (rk == null)
-                {
-                    return false;
-                }
-
-                // Check Our own filetype
-                if (rk.GetValue(null) == null || !rk.GetValue(null).Equals(MyAppName + "_file"))
-                {
-                    return false;
-                }
-
-                // Check Mime type...
-                if (rk.GetValue("Content Type") == null || !rk.GetValue("Content Type").Equals(String.Format("application/{0}", MyAppName.ToLower())))
-                {
-                    return false;
-                }
-
-                using (RegistryKey rk2 = Registry.ClassesRoot.OpenSubKey(@"\" + MyAppName + "_file", false))
-                {
-                    if (rk2 == null)
-                    {
-                        return false;
-                    }
-
-                    // Check Assignment of hottack.net to *.hot files
-                    if (rk2.GetValue(null) == null || !rk2.GetValue(null).Equals(MyAppName + " File"))
-                    {
-                        return false;
-                    }
-
-                    // Check editflags
-                    if (rk2.GetValue("EditFlags") == null)
-                    {
-                        return false;
-                    }
-
-                    // Check Show extension
-                    if (rk2.GetValue("AlwaysShowExt") == null)
-                    {
-                        return true;
-                    }
-
-                    // Check the icon to a large application one
-                    using (RegistryKey rk3 = rk2.OpenSubKey("DefaultIcon", false))
-                    {
-                        if (rk3 == null || rk3.GetValue(null) == null || !rk3.GetValue(null).ToString().Equals(Application.ExecutablePath + ",0", StringComparison.OrdinalIgnoreCase))
-                        {
-                            return false;
-                        }
-                    }
-
-                    // Check the open verb
-                    using (RegistryKey rk4 = rk2.OpenSubKey(@"shell\open\command", false))
-                    {
-                        if (rk4 == null || rk4.GetValue(null) == null || !rk4.GetValue(null).ToString().Equals("\"" + Application.ExecutablePath + "\"" + " \"%1\"", StringComparison.OrdinalIgnoreCase))
-                        {
-                            return false;
-                        }
-                    }
-
-                    // Check the merge verb
-                    using (RegistryKey rk5 = rk2.OpenSubKey(@"shell\merge\command", false))
-                    {
-                        if (rk5 == null || rk5.GetValue(null) == null || !rk5.GetValue(null).ToString().Equals("\"" + Application.ExecutablePath + "\"" + " \"%1\" /Merge", StringComparison.OrdinalIgnoreCase))
-                        {
-                            return false;
-                        }
-                    }
-                }
-            }
-
-            return true;
-        }
-
-        /// <summary>
-        /// Register File Type and Application.
-        /// </summary>
-        /// <returns>True if successfull</returns>
-        public static Boolean RegisterIlProj()
-        {
-            if (DetectIlProj())
-            {
-                return true;
-            }
-
-            try
-            {
-                using (RegistryKey rk1 = Registry.ClassesRoot.CreateSubKey(MyExtension))
-                {
-
-                    // Register our own filetype
-                    if (rk1 != null)
-                    {
-                        // Assign hottack.net to *.hot files
-                        if (rk1.GetValue(null) == null ||
-                            !rk1.GetValue(null).Equals(MyAppName + "_file"))
-                        {
-                            //(Default) value.
-                            rk1.SetValue(null, MyAppName + "_file");
-                        }
-
-                        // Propose a new mime type...
-                        if (rk1.GetValue("Content Type") == null ||
-                            !rk1.GetValue("Content Type").Equals(String.Format("application/{0}", MyAppName.ToLower())))
-                        {
-                            rk1.SetValue("Content Type", String.Format("application/{0}", MyAppName.ToLower()));
-                        }
-                    }
-                    else
-                    {
-                        return false;
-                    }
-
-                    using (RegistryKey rk2 = Registry.ClassesRoot.CreateSubKey(MyAppName + "_file"))
-                    {
-                        // Register our own filetype
-                        if (rk2 != null)
-                        {
-                            // Assign hottack.net to *.hot files
-                            if (rk2.GetValue(null) == null ||
-                                !rk2.GetValue(null).Equals(MyAppName + " File"))
-                            {
-                                rk2.SetValue(null, MyAppName + " File");
-                            }
-
-                            // Purpose of editflags unknown
-                            if (rk2.GetValue("EditFlags") == null)
-                            {
-                                rk2.SetValue("EditFlags", new Byte[4] { 0, 0, 0, 0 }, RegistryValueKind.Binary);
-                            }
-
-                            // Always show extension
-                            if (rk2.GetValue("AlwaysShowExt") == null)
-                            {
-                                rk2.SetValue("AlwaysShowExt", String.Empty);
-                            }
-
-                            // Change the icon to a large application one
-                            using (RegistryKey rk3 = rk2.CreateSubKey("DefaultIcon"))
-                            {
-                                if (rk3 != null)
-                                {
-                                    if (rk3.GetValue(null) == null ||
-                                        !rk3.GetValue(null).Equals(Application.ExecutablePath + ",0"))
-                                    {
-                                        rk3.SetValue(null, Application.ExecutablePath + ",0");
-                                    }
-                                }
-                                else
-                                {
-                                    return false;
-                                }
-
-                            }
-
-                            // Add the open verb
-                            using (RegistryKey rk4 = rk2.CreateSubKey(@"shell\open\command"))
-                            {
-                                if (rk4 != null)
-                                {
-                                    if (rk4.GetValue(null) == null ||
-                                        !rk4.GetValue(null).Equals("\"" + Application.ExecutablePath + "\"" + " \"%1\""))
-                                    {
-                                        rk4.SetValue(null, "\"" + Application.ExecutablePath + "\"" + " \"%1\"");
-                                    }
-                                }
-                                else
-                                {
-                                    return false;
-                                }
-                            }
-
-                            // Add the merge verb
-                            using (RegistryKey rk4 = rk2.CreateSubKey(@"shell\merge\command"))
-                            {
-                                if (rk4 != null)
-                                {
-                                    if (rk4.GetValue(null) == null ||
-                                        !rk4.GetValue(null).Equals("\"" + Application.ExecutablePath + "\"" + " \"%1\" /Merge"))
-                                    {
-                                        rk4.SetValue(null, "\"" + Application.ExecutablePath + "\"" + " \"%1\" /Merge");
-                                    }
-                                }
-                                else
-                                {
-                                    return false;
-                                }
-                            }
-
-                            //TODO ilproj_auto_file|shell|open|command|(Default)=Executable?
-                            //     Not clear what creates this key. Created by Explorer's Open Width Context MenuItem?
-
-                            //TODO HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\.ilproj
-                            //     If old code does not work, above key is probably present (controlled by Explorer's Open Width Context MenuItem).
-
-                            //TODO HKEY_CLASSES_ROOT\Applications\ILMergeGui.exe
-                            //     Created by Explorer's Open Width Context MenuItem. 
-
-                            //{$IFDEF SHLWAPI}
-                            //            //Let Windows Udate Explorer
-                            //            SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, nil, nil);
-                            //{$ENDIF SHLWAPI}
-                        }
-                        else
-                        {
-                            return false;
-                        }
-                    }
-                }
-            }
-            catch
-            {
-                return false;
-            }
-
-            return true;
-        }
-
-
         private void SetWaterMark(Boolean show)
         {
             LVBKIMAGE backImage = new LVBKIMAGE();
@@ -2066,6 +2263,33 @@ namespace ILMergeGui
             Marshal.FreeHGlobal(pointer);
 
             ListAssembly.Invalidate();
+        }
+
+        private void UpdatePrimary()
+        {
+            btnMerge.Enabled = ListAssembly.Items.Count > 0;
+
+            if (ListAssembly.CheckedItems != null && ListAssembly.CheckedItems.Count > 0)
+            {
+                Primary = (String)ListAssembly.CheckedItems[0].Tag;
+                if (Path.GetFileName(Primary) != LblPrimaryAssembly.Text)
+                {
+                    LblPrimaryAssembly.Text = Path.GetFileName(Primary);
+                }
+            }
+            else
+            {
+                Primary = String.Empty;
+                if ("···" != LblPrimaryAssembly.Text)
+                {
+                    LblPrimaryAssembly.Text = "···";
+                }
+            }
+        }
+
+        private void visitWebsiteToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ClickOnceUpdater.VisitWebsite("http://ilmergegui.codeplex.com//");
         }
 
         /// <summary>
@@ -2126,44 +2350,6 @@ namespace ILMergeGui
             {
                 Process.Start(new ProcessStartInfo(TxtLogFile.Text));
             }
-        }
-
-        private void mnuFileExit_Click(object sender, EventArgs e)
-        {
-            Application.Exit();
-        }
-
-        private void ListAssembly_ItemChecked(object sender, ItemCheckedEventArgs e)
-        {
-            UpdatePrimary();
-        }
-
-        private void ListAssembly_ItemCheck(object sender, ItemCheckEventArgs e)
-        {
-            if (e.NewValue == CheckState.Checked)
-            {
-                ListAssembly.BeginUpdate();
-                foreach (ListViewItem lvi in ListAssembly.CheckedItems)
-                {
-                    if (lvi.Index != e.Index)
-                    {
-                        lvi.Checked = false;
-                        lvi.Selected = false;
-                    }
-                }
-
-                foreach (ListViewItem lvi in ListAssembly.Items)
-                {
-                    lvi.Selected = lvi.Index == e.Index;
-                }
-
-                ListAssembly.EndUpdate();
-            }
-        }
-
-        private void CboDebug_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            //
         }
 
         #endregion Methods
@@ -2243,36 +2429,5 @@ namespace ILMergeGui
         }
 
         #endregion Nested Types
-
-        private void radioButton1_CheckedChanged(object sender, EventArgs e)
-        {
-            if (((RadioButton)sender).Checked)
-            {
-                LocateEngine(Merger.ILMerge);
-            }
-        }
-
-        private void radioButton2_CheckedChanged(object sender, EventArgs e)
-        {
-            if (((RadioButton)sender).Checked)
-            {
-                LocateEngine(Merger.ILRepack);
-            }
-        }
-
-        private void checkForUpdatesToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            ClickOnceUpdater.InstallUpdateSyncWithInfo("http://ilmergegui.codeplex.com/releases/view/latest");
-        }
-
-        private void visitWebsiteToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            ClickOnceUpdater.VisitWebsite("http://ilmergegui.codeplex.com//");
-        }
-
-        private void aboutToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            new AboutDialog().ShowDialog();
-        }
     }
 }
