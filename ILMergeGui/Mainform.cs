@@ -1625,13 +1625,22 @@ namespace ILMergeGui
                 }
             }
 
-            //! TODO Fourth Search Strategy.
+            //4) Current Directory...
+            if (File.Exists("ILMerge.exe"))
+            {
+                iLMergePath = Path.GetFullPath("ILMerge.exe");
+
+                Debug.Print("ILMerge Location Method=Current Directory");
+                Debug.Print("ILMerge Path={0}", iLMergePath);
+            }
+
+            //! TODO Fifth Search Strategy.
             //! HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\UserData\S-1-5-21-822211721-2317658140-2171821640-1000\Components\F995DC6782BCD301ECDB40AF0BEFB501
             //! FB8E12458022DA64AB4CCF9364EE3B15=C:\Program Files (x86)\Microsoft\ILMerge\ILMerge.exe
 
             if (String.IsNullOrEmpty(iLMergePath) || !File.Exists(iLMergePath))
             {
-                Debug.Print("ILMerge located=Error");
+                Debug.Print("ILMerge Location=Error");
                 Debug.Print("ILMerge Path={0}", iLMergePath);
 
                 // MessageBox.Show("IlMerge could not be located, please reinstall!", "ILMergeGui", MessageBoxButtons.OK, MessageBoxIcon.Error);
