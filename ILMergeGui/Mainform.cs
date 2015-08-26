@@ -185,6 +185,9 @@ namespace ILMergeGui
         //MRU Code
         private MruStripMenu mruMenu;
         private string mruRegKey = "SOFTWARE\\" + Application.CompanyName + "\\ " + AppTitle;
+        private bool AutoClose;
+        private int ExitCode;
+        private string ExitMsg;
 
         #endregion Fields
 
@@ -474,19 +477,27 @@ namespace ILMergeGui
         {
             get
             {
-                String Result = String.Empty;
+                return "ILMergeGUI";
 
-                if (String.IsNullOrEmpty(Application.ProductName))
-                {
-                    String[] split = AppDir.Split(Path.DirectorySeparatorChar);
-                    Result = Path.ChangeExtension(split[split.Length - 1], "");
-                }
-                else
-                {
-                    Result = Application.ProductName;
-                }
+                //! After merge with mru.dll the following code fails.
+                //String Result = String.Empty;
 
-                return Result;
+                //FileVersionInfo fvi = FileVersionInfo.GetVersionInfo(Application.ExecutablePath);
+
+                ////if (String.IsNullOrEmpty(Application.ProductName))
+                //if (String.IsNullOrEmpty(fvi.ProductName)) {
+                //    String[] split = AppDir.Split(Path.DirectorySeparatorChar);
+                //    Result = Path.ChangeExtension(split[split.Length - 1], "");
+                // }
+                // else
+                // {
+                //    Result = fvi.ProductName;
+
+                //    MessageBox.Show(Application.ExecutablePath);
+                //    MessageBox.Show(Application.ProductName);
+                //}
+
+                //return Result;
             }
         }
 
@@ -900,9 +911,11 @@ namespace ILMergeGui
                     {
                         //! .Net v4.5 fixup.
                         //! [workitem:8745]
-                        if (ver.Major == 4 && ver.Minor == 5)
+                        //! .Net v4.6 fixup.
+                        //! [workitem:8753]
+                        if (ver.Major == 4 && (ver.Minor == 5 || ver.Minor == 6))
                         {
-                            versionKey = "4.5";
+                            versionKey = String.Format("4.{0}", ver.Minor);
                             versions.Add(new DotNet()
                             {
                                 //! Add Key for ILRepack.
@@ -1032,7 +1045,18 @@ namespace ILMergeGui
             //! [workitem:8741]
             if (String.IsNullOrWhiteSpace(TxtOutputAssembly.Text) || !Directory.Exists(Path.GetDirectoryName(TxtOutputAssembly.Text.Trim())))
             {
-                MessageBox.Show(Resources.Error_NoOutputPath, Resources.Error_Term, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ExitMsg = Resources.Error_NoOutputPath;
+                ExitCode = 8;
+                
+                if (!AutoClose)
+                {
+                    MessageBox.Show(ExitMsg, Resources.Error_Term, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                else
+                {
+                    ExitILMergeGUI();
+                }
+
                 TxtOutputAssembly.Focus();
 
                 return;
@@ -1044,7 +1068,16 @@ namespace ILMergeGui
 
             if (File.Exists(TxtKeyFile.Text) && !File.Exists(TxtKeyFile.Text))
             {
-                MessageBox.Show(Resources.Error_KeyFileNotExists, Resources.Error_Term, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ExitMsg = Resources.Error_KeyFileNotExists;
+                ExitCode = 7;
+                if (!AutoClose)
+                {
+                    MessageBox.Show(ExitMsg, Resources.Error_Term, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                else
+                {
+                    ExitILMergeGUI();
+                }
                 return;
             }
 
@@ -1052,7 +1085,17 @@ namespace ILMergeGui
             {
                 if (((String)ListAssembly.Items[i].Tag).ToLower().Equals(TxtOutputAssembly.Text.ToLower()))
                 {
-                    MessageBox.Show(Resources.Error_OutputConflict, Resources.Error_Term, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    ExitMsg = Resources.Error_OutputConflict;
+                    ExitCode = 6;
+
+                    if (!AutoClose)
+                    {
+                        MessageBox.Show(ExitMsg, Resources.Error_Term, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                    else
+                    {
+                        ExitILMergeGUI();
+                    }
                     TxtOutputAssembly.Focus();
 
                     return;
@@ -1070,7 +1113,17 @@ namespace ILMergeGui
                 }
                 catch (Exception)
                 {
-                    MessageBox.Show(Resources.Error_OutputPathInUse, Resources.Error_Term, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    ExitMsg = Resources.Error_OutputPathInUse;
+                    ExitCode = 5;
+
+                    if (!AutoClose)
+                    {
+                        MessageBox.Show(ExitMsg, Resources.Error_Term, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                    else
+                    {
+                        ExitILMergeGUI();
+                    }
                     return;
                 }
             }
@@ -1131,7 +1184,10 @@ namespace ILMergeGui
 
             //! .Net v4.5 fixup. 4.5 is an inplace upgrade of 4.0 which does not alter the version number.
             //! [workitem:8745]
-            if (Engine == Merger.ILMerge && framework.version.Major == 4 && framework.version.Minor == 5)
+
+            //! .Net v4.6 fixup.. 4.6 is an inplace upgrade of 4.0 which does not alter the version number.
+            //! [workitem:8753]
+            if (Engine == Merger.ILMerge && framework.version.Major == 4 && (framework.version.Minor == 5 || framework.version.Minor == 6))
             {
                 frameversion = "4.0";
             }
@@ -1177,7 +1233,17 @@ namespace ILMergeGui
             }
             catch (TargetInvocationException)
             {
-                MessageBox.Show(String.Format(Resources.Error_Framework, ff, ilMerge), Resources.Error_Term, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ExitMsg = String.Format(Resources.Error_Framework, ff, ilMerge);
+                ExitCode = 9;
+
+                if (!AutoClose)
+                {
+                    MessageBox.Show(ExitMsg, Resources.Error_Term, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                else
+                {
+                    ExitILMergeGUI();
+                }
 
                 return;
             }
@@ -1758,6 +1824,17 @@ namespace ILMergeGui
             menuStrip1.Update();
             menuStrip1.Refresh();
 
+            AutoClose = false;
+            ExitCode = 0;
+
+            foreach (String arg2 in Environment.GetCommandLineArgs())
+            {
+                if (arg2.Equals("/close", StringComparison.OrdinalIgnoreCase))
+                {
+                    AutoClose = true;
+                }
+            }
+
             foreach (String arg in Environment.GetCommandLineArgs())
             {
                 if (!arg.StartsWith("/") && arg.EndsWith(MyExtension, StringComparison.OrdinalIgnoreCase))
@@ -1778,21 +1855,44 @@ namespace ILMergeGui
                     }
                     else
                     {
-                        MessageBox.Show(String.Format("Project File not Found:\r\n\r\n{0}", Path.GetFullPath(arg)), Application.ProductName);
+                        ExitCode = 4;
+                        ExitMsg = String.Format("Project File not Found:\r\n\r\n{0}", Path.GetFullPath(arg));
+
+                        if (!AutoClose)
+                        {
+                            MessageBox.Show(ExitMsg, Application.ProductName);
+                        }
+                        else
+                        {
+                            ExitILMergeGUI();
+                        }
                     }
                 }
             }
 
-            foreach (String arg in Environment.GetCommandLineArgs())
+            foreach (String arg0 in Environment.GetCommandLineArgs())
             {
-                if (arg.Equals("/?", StringComparison.OrdinalIgnoreCase) ||
-                    arg.Equals("/h?", StringComparison.OrdinalIgnoreCase) ||
-                    arg.Equals("/help", StringComparison.OrdinalIgnoreCase))
+                if (arg0.Equals("/?", StringComparison.OrdinalIgnoreCase) ||
+                    arg0.Equals("/h?", StringComparison.OrdinalIgnoreCase) ||
+                    arg0.Equals("/help", StringComparison.OrdinalIgnoreCase))
                 {
                     MessageBox.Show("Commandline syntax is:\r\n\r\n" +
-                      String.Format("ILMergeGui <{0}> [/Merge] [/?]\r\n", MyWildcard), Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
+                      String.Format("ILMergeGui <{0}> [/Merge] [/Close] [/?]\r\n\r\n", MyWildcard) +
+                    " /Merge will automaticaly merge the supplied ilproject\r\n\r\n" +
+                    " /Close will automaticaly close ILMergeGUI if /Merge is present\r\n\r\n" +
+                    " /? will display this help\r\n", Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
+
+                    Environment.Exit(ExitCode);
                 }
             }
+        }
+
+        private void ExitILMergeGUI()
+        {
+            Console.WriteLine(ExitMsg);
+            Console.WriteLine("ExitCode: {0}", ExitCode);
+
+            Environment.Exit(ExitCode);
         }
 
         private void Mainform_Shown(object sender, EventArgs e)
@@ -2334,6 +2434,9 @@ namespace ILMergeGui
 
             EnableForm(true);
 
+            ExitCode = 0;
+            ExitMsg = String.Empty;
+
             if (e.Error != null)
             {
                 //'ErrorHandler.Handle(e.Error)
@@ -2344,20 +2447,43 @@ namespace ILMergeGui
                 //! The InnerException shows the true error from ILMerge (if present).
                 String Message = (e.Result as Exception).InnerException == null ? (e.Result as Exception).Message : (e.Result as Exception).InnerException.Message;
 
-                MessageBox.Show(Resources.Error_MergeException + Environment.NewLine + Environment.NewLine + Message, Resources.Error_Term, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ExitCode = 1;
+                ExitMsg = Resources.Error_MergeException + Environment.NewLine + Environment.NewLine + Message;
+
+                if (!AutoClose)
+                {
+                    MessageBox.Show(ExitMsg, Resources.Error_Term, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
             }
             else if (!File.Exists(TxtOutputAssembly.Text) || new FileInfo(TxtOutputAssembly.Text).Length == 0)
             {
-                MessageBox.Show(Resources.Error_CantMerge, Resources.Error_Term, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ExitCode = 2;
+                ExitMsg = Resources.Error_CantMerge;
+
+                if (!AutoClose)
+                {
+                    MessageBox.Show(ExitMsg, Resources.Error_Term, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
             else
             {
-                MessageBox.Show(Resources.AssembliesMerged, Resources.Done, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ExitMsg = Resources.AssembliesMerged;
+                ExitCode = 0;
+
+                if (!AutoClose)
+                {
+                    MessageBox.Show(ExitMsg, Resources.Done, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
             }
 
-            if (ChkGenerateLog.Checked && File.Exists(TxtLogFile.Text) && new FileInfo(TxtLogFile.Text).Length != 0)
+            if (!AutoClose && ChkGenerateLog.Checked && File.Exists(TxtLogFile.Text) && new FileInfo(TxtLogFile.Text).Length != 0)
             {
                 Process.Start(new ProcessStartInfo(TxtLogFile.Text));
+            }
+
+            if (AutoClose)
+            {
+                ExitILMergeGUI();
             }
         }
 
